@@ -12,7 +12,7 @@ async function request(action, extras={}, useToken=false){
   const headers = {'content-type':'application/json'};
   if (useToken && getToken()) headers.authorization = 'Bearer ' + getToken();
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), action==='student-cv-upload'?60000:15000);
+  const timer = setTimeout(() => ctrl.abort(), ['student-cv-upload','public-offer-submit'].includes(action)?60000:15000);
   try {
     const res=await fetch(API,{method:'POST',headers,body:JSON.stringify({action,...extras}),signal:ctrl.signal});
     const json=await res.json().catch(()=>({ok:false,error:'No se recibió una respuesta válida del servidor.'}));
@@ -125,7 +125,7 @@ $('#login-form').addEventListener('submit',async e=>{
  input.usuario=String(input.usuario||'').trim().toLowerCase();
  if(!input.usuario||!input.password){setAlert('#login-alert','Ingresá tu usuario y contraseña.');return;}
  setBusy('#submit-login',true,'Ingresar →');
- try{const data=await request('login',input);if($('#remember').checked)localStorage.setItem('bolsa-token',data.token);else sessionStorage.setItem('bolsa-token',data.token);state.profile=data.profile;$('#login-password').value='';updateHeader();navigate('perfil');}
+ try{const data=await request('login',input);localStorage.removeItem('bolsa-token');sessionStorage.removeItem('bolsa-token');if($('#remember').checked)localStorage.setItem('bolsa-token',data.token);else sessionStorage.setItem('bolsa-token',data.token);state.profile=data.profile;$('#login-password').value='';updateHeader();navigate('perfil');}
  catch(err){
   const message=err.message==='Usuario o contraseña incorrectos.'
    ? 'Matrícula o contraseña incorrecta. Usá la contraseña que creaste al registrarte (no la cédula).'
