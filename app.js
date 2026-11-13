@@ -26,6 +26,8 @@ async function request(action, extras={}, useToken=false){
 }
 function navigate(to){
   if(!screens.has(to))to='inicio';
+  // Un usuario con sesión activa no necesita ver registro ni acceso.
+  if(getToken() && (to==='registro'||to==='login'))to='perfil';
   state.screen=to;
   for(const el of document.querySelectorAll('[data-screen]')) el.classList.toggle('hidden', el.dataset.screen!==to);
   for(const el of document.querySelectorAll('.nav [data-nav]')) el.classList.toggle('active',el.dataset.nav===to);
@@ -34,7 +36,14 @@ function navigate(to){
   if(to==='ofertas') loadOffers();
   if(to==='perfil') loadProfile();
 }
-function updateHeader(){const nav=$('#nav-session');if(getToken()){nav.textContent='Mi espacio';nav.dataset.nav='perfil';}else{nav.textContent='Iniciar sesión';nav.dataset.nav='login';}}
+function updateHeader(){
+ const loggedIn=Boolean(getToken());
+ const nav=$('#nav-session');
+ nav.textContent=loggedIn?'Mi espacio':'Iniciar sesión';
+ nav.dataset.nav=loggedIn?'perfil':'login';
+ // Ocultar todos los accesos a Registrarse/Crear cuenta mientras haya sesión.
+ for(const btn of document.querySelectorAll('[data-nav="registro"]')) btn.classList.toggle('hidden',loggedIn);
+}
 async function loadOffers(){
  const status=$('#offers-status');const list=$('#offers-list');status.classList.remove('hidden');status.textContent='Cargando ofertas...';list.innerHTML='';
  try{const data=await request('offers');state.offers=data.items||[];renderOffers();}
