@@ -87,6 +87,25 @@ async function userProfile(user) {
 }
 
 
+
+async function mail(to,subject,body){
+ const key=Deno.env.get("RESEND_API_KEY"),from=Deno.env.get("RESEND_FROM");
+ if(!key||!from)return false;
+ try{
+  const res=await fetch("https://api.resend.com/emails",{
+   method:"POST",
+   headers:{"authorization":"Bearer "+key,"content-type":"application/json","user-agent":"bolsa-universitaria/1.0"},
+   body:JSON.stringify({from,to:[to],subject,text:body})
+  });
+  if(!res.ok)console.error("Error al notificar correo",res.status);
+  return res.ok;
+ }catch(e){console.error("Servidor de correo no disponible.");return false;}
+}
+async function sha256B64(raw){
+ const result=new Uint8Array(await crypto.subtle.digest("SHA-256",textEncoder.encode(raw)));
+ return b64(result);
+}
+
 async function actorFor(req,acceptedRoles){
  const session=await sessionFrom(req);if(!session)return null;
  const found=await db("usuario",{select:"id_usuario,nombre_usuario,tipo_usuario,correo,habilitado",id_usuario:"eq."+session.id,limit:1});
@@ -273,7 +292,8 @@ Deno.serve(async req => {
    await db("usuario",{id_usuario:"eq."+user.id_usuario},null,"DELETE").catch(()=>{});
    return fail("No se pudo crear la cuenta. Revisá los datos ingresados.",409);
   }
-  return response({ok:true,message:"Cuenta creada. El envío automático de contraseñas por correo está pendiente de configuración.",temporary_password:temporary,username});
+  const notified=await mail(email,"Acceso a Bolsa Laboral Universitaria","Usuario: "+username+"\nContraseña temporal: "+temporary+"\nPor seguridad, cambiá esta contraseña al ingresar.");
+  return response({ok:true,message:notified?"Cuenta creada. Se enviaron las credenciales por correo.":"Cuenta creada, pero no se enviaron las credenciales por correo. Copiá la contraseña temporal ahora.",temporary_password:notified?null:temporary,username});
  }
  if(action==="secretary-company-update"||action==="secretary-reviewer-update"){
   const actor=await actorFor(req,["Secretaría Académica"]);if(!actor)return fail("Acceso de Secretaría requerido.",401);
@@ -451,7 +471,13 @@ Deno.serve(async req => {
   const done=await db("oferta_laboral",{id_oferta:"eq."+id,estado:"eq.Pendiente de aprobación"},update,"PATCH");
   if(!done.length)return fail("Esta oferta ya fue evaluada.",409);
   await db("revision_oferta",{},[{id_oferta:id,id_revisor:actor.reviewer.id_revisor,decision:decision==="Aprobar"?"Aprobada":"Rechazada",motivo_rechazo:decision==="Rechazar"?reason:null}],"POST");
-  return response({ok:true,message:decision==="Aprobar"?"Oferta aprobada y publicada por 14 días.":"Oferta rechazada. Notificación por correo pendiente de configuración."});
+  if(decision==="Rechazar"){
+   const offerDetail=await db("oferta_laboral",{select:"id_remitente",id_oferta:"eq."+id,limit:1});
+   const receiver=offerDetail[0]?await db("empresa_remitente",{select:"correo_contacto",id_remitente:"eq."+offerDetail[0].id_remitente,limit:1}):[];
+   const notified=receiver[0]?await mail(receiver[0].correo_contacto,"Revisión de oferta laboral","Tu oferta fue rechazada por "+actor.reviewer.instancia+". Motivo: "+reason):false;
+   return response({ok:true,message:notified?"Oferta rechazada y correo enviado.":"Oferta rechazada. No se pudo enviar el correo de notificación."});
+  }
+  return response({ok:true,message:"Oferta aprobada y publicada por 14 días."});
  }
  if(action==="reviewer-approved-save"){
   const actor=await actorFor(req,["Centro de Estudiantes","Secretaría Académica"]);if(!actor)return fail("Acceso de revisor requerido.",401);
@@ -618,6 +644,40 @@ Deno.serve(async req => {
   await db("postulacion",{id_postulacion:"eq."+id,id_estudiante:"eq."+auth.student.id_estudiante,estado:"eq.Activa"},{estado:"Retirada",fecha_retiro:new Date().toISOString()},"PATCH");
   return response({ok:true,message:"Postulación retirada. No podrás volver a postularte a la misma oferta."});
  }
+
+ if(action==="password-reset-request"){
+  const email=safeField(input.correo,200).toLowerCase();
+  if(!validEmail(email))return fail("Ingresá un correo válido.");
+  if(!Deno.env.get("RESEND_API_KEY")||!Deno.env.get("RESEND_FROM"))return fail("La recuperación por correo aún no está configurada. Consultá con Secretaría Académica.",503);
+  const generic="Si el correo está registrado, recibirás un enlace para restablecer la contraseña.";
+  const users=await db("usuario",{select:"id_usuario,correo,habilitado",correo:"eq."+email,limit:1});
+  const user=users[0];
+  if(!user||!user.habilitado)return response({ok:true,message:generic});
+  const raw=b64(crypto.getRandomValues(new Uint8Array(32)));
+  const expiry=new Date(Date.now()+30*60000).toISOString();
+  const hash=await sha256B64(raw);
+  const records=await db("token_recuperacion",{},[{id_usuario:user.id_usuario,token_hash:hash,fecha_expiracion:expiry,usado:false}],"POST");
+  const link="https://bolsa-laboral-universitaria-web-v1.vercel.app/?token="+encodeURIComponent(raw)+"#restablecer";
+  const delivered=await mail(user.correo,"Recuperación de contraseña - Bolsa Laboral","Para elegir una nueva contraseña, abrí este enlace válido durante 30 minutos: "+link+"\n\nSi no solicitaste este cambio, ignorá este correo.");
+  if(!delivered){
+   await db("token_recuperacion",{id_token:"eq."+records[0].id_token},{usado:true,fecha_uso:new Date().toISOString()},"PATCH").catch(()=>{});
+   return fail("No se pudo enviar el correo de recuperación. Contactá con Secretaría Académica.",503);
+  }
+  return response({ok:true,message:generic});
+ }
+ if(action==="password-reset-complete"){
+  const raw=String(input.token||"").trim(),pass=String(input.password||"");
+  if(!/^[A-Za-z0-9_-]{25,80}$/.test(raw)||pass.length<8||pass.length>72)return fail("Enlace o contraseña inválidos.");
+  const tokenHash=await sha256B64(raw);
+  const tokens=await db("token_recuperacion",{select:"id_token,id_usuario,fecha_expiracion,usado",token_hash:"eq."+tokenHash,usado:"eq.false",order:"id_token.desc",limit:1});
+  const token=tokens[0];
+  if(!token||!token.fecha_expiracion||Date.parse(token.fecha_expiracion+"Z")<Date.now())return fail("El enlace ha expirado o ya fue utilizado.",409);
+  const used=await db("token_recuperacion",{id_token:"eq."+token.id_token,usado:"eq.false"},{usado:true,fecha_uso:new Date().toISOString()},"PATCH");
+  if(!used.length)return fail("El enlace ya fue utilizado.",409);
+  await db("usuario",{id_usuario:"eq."+token.id_usuario},{contrasena_hash:await passHash(pass)},"PATCH");
+  return response({ok:true,message:"Contraseña actualizada. Ya podés iniciar sesión."});
+ }
+
  if(action==="password-change"){
   const claims=await sessionFrom(req);if(!claims)return fail("Iniciá sesión.",401);
   const users=await db("usuario",{select:"id_usuario,contrasena_hash,habilitado",id_usuario:"eq."+claims.id,limit:1});
