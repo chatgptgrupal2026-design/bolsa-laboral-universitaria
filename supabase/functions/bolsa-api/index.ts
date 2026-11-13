@@ -85,6 +85,25 @@ async function userProfile(user) {
  }
  return result;
 }
+
+async function studentForRequest(req) {
+ const claims=await sessionFrom(req);
+ if(!claims) return null;
+ const users=await db("usuario",{select:"id_usuario,nombre_usuario,correo,contrasena_hash,tipo_usuario,habilitado",id_usuario:"eq."+claims.id,limit:1});
+ const user=users[0];
+ if(!user || !user.habilitado || user.tipo_usuario!=="Estudiante") return null;
+ const students=await db("estudiante",{select:"*",id_usuario:"eq."+user.id_usuario,limit:1});
+ if(!students.length)return null;
+ return {user,student:students[0]};
+}
+function safeField(v,len=250) {return String(v??"").trim().slice(0,len);}
+function numberId(v) { const n=Number(v);return Number.isSafeInteger(n) && n>0?n:null; }
+const itemTables={
+ experiencia:{table:"experiencia_laboral",key:"id_experiencia",fields:["empresa","cargo","fecha_inicio","fecha_fin"]},
+ idioma:{table:"idioma",key:"id_idioma",fields:["nombre","nivel"]},
+ capacitacion:{table:"capacitacion",key:"id_capacitacion",fields:["tipo","nombre","institucion","anio"]}
+};
+
 Deno.serve(async req => {
  if(req.method==="OPTIONS")return new Response(null,{status:204,headers:cors});
  if(!BASE || !ADMIN_KEY) return fail("Configuración del servidor pendiente.",503);
@@ -151,6 +170,158 @@ Deno.serve(async req => {
   if(!users[0]||!users[0].habilitado)return fail("La cuenta no está habilitada.",403);
   return response({ok:true,profile:await userProfile(users[0])});
  }
+
+ if(action==="student-dashboard"){
+  const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
+  const {user,student}=auth;
+  const [carreras,profesionales,curriculums]=await Promise.all([
+   db("carrera",{select:"id_carrera,nombre",order:"nombre.asc"}),
+   db("perfil_profesional",{select:"*",id_estudiante:"eq."+student.id_estudiante,limit:1}),
+   db("curriculum_vitae",{select:"id_cv,nombre_archivo,fecha_carga,tamano_bytes",id_estudiante:"eq."+student.id_estudiante,limit:1})
+  ]);
+  const prof=profesionales[0]||null;
+  let experiencias=[],idiomas=[],capacitaciones=[];
+  if(prof){
+    [experiencias,idiomas,capacitaciones]=await Promise.all([
+     db("experiencia_laboral",{select:"*",id_perfil:"eq."+prof.id_perfil,order:"id_experiencia.desc"}),
+     db("idioma",{select:"*",id_perfil:"eq."+prof.id_perfil,order:"id_idioma.desc"}),
+     db("capacitacion",{select:"*",id_perfil:"eq."+prof.id_perfil,order:"id_capacitacion.desc"})
+    ]);
+  }
+  const {cedula,fecha_nacimiento,telefono,semestre_actual,matricula,nombre,apellido,id_carrera}=student;
+  return response({ok:true,student:{matricula,cedula,nombre,apellido,fecha_nacimiento,telefono,semestre_actual,id_carrera,correo:user.correo},carreras,professional:prof,experiencias,idiomas,capacitaciones,cv:curriculums[0]||null});
+ }
+ if(action==="student-academic-save"){
+  const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
+  const correo=safeField(input.correo,200).toLowerCase();
+  const telefono=safeField(input.telefono,25);
+  const fecha=safeField(input.fecha_nacimiento,10);
+  const semestre=input.semestre_actual==null || String(input.semestre_actual).trim()===""?null:Number(input.semestre_actual);
+  const carrera=numberId(input.id_carrera);
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)|| (telefono&&!/^[+0-9 ()-]{5,25}$/.test(telefono))||(fecha&&!/^\d{4}-\d{2}-\d{2}$/.test(fecha))||(fecha&&isNaN(Date.parse(fecha)))||(fecha&&fecha>new Date().toISOString().slice(0,10))||(semestre!==null&&(!Number.isInteger(semestre)||semestre<1||semestre>20))||!carrera) return fail("Revisá el correo, teléfono, fecha, semestre y carrera.");
+  const careers=await db("carrera",{select:"id_carrera",id_carrera:"eq."+carrera,limit:1});
+  if(!careers.length)return fail("La carrera no existe.");
+  const others=await db("usuario",{select:"id_usuario",correo:"eq."+correo,limit:1});
+  if(others.length&&others[0].id_usuario!==auth.user.id_usuario)return fail("El correo ya está registrado.",409);
+  // La matrícula, cédula, nombres y apellidos nunca se modifican aquí.
+  await db("estudiante",{id_estudiante:"eq."+auth.student.id_estudiante},{telefono:telefono||null,fecha_nacimiento:fecha||null,semestre_actual:semestre,id_carrera:carrera},"PATCH");
+  await db("usuario",{id_usuario:"eq."+auth.user.id_usuario},{correo},"PATCH");
+  return response({ok:true,message:"Perfil académico actualizado."});
+ }
+ if(action==="student-professional-save"){
+  const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
+  const data={habilidades:safeField(input.habilidades,1500)||null,tecnologias:safeField(input.tecnologias,1500)||null,disponibilidad_laboral:safeField(input.disponibilidad_laboral,100)||null};
+  const found=await db("perfil_profesional",{select:"id_perfil",id_estudiante:"eq."+auth.student.id_estudiante,limit:1});
+  if(found.length)await db("perfil_profesional",{id_perfil:"eq."+found[0].id_perfil},data,"PATCH");
+  else await db("perfil_profesional",{},[{id_estudiante:auth.student.id_estudiante,...data}],"POST");
+  return response({ok:true,message:"Perfil profesional guardado."});
+ }
+ if(action==="student-item-save"||action==="student-item-remove"){
+  const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
+  const item=itemTables[String(input.item_type||"")];
+  if(!item)return fail("Tipo de dato inválido.");
+  let prof=(await db("perfil_profesional",{select:"id_perfil",id_estudiante:"eq."+auth.student.id_estudiante,limit:1}))[0];
+  if(!prof){
+   if(action==="student-item-remove")return fail("El elemento no existe.",404);
+   prof=(await db("perfil_profesional",{},[{id_estudiante:auth.student.id_estudiante}],"POST"))[0];
+  }
+  const id=numberId(input.item_id);
+  if(action==="student-item-remove"){
+   if(!id)return fail("Identificador inválido.");
+   const found=await db(item.table,{select:item.key,[item.key]:"eq."+id,id_perfil:"eq."+prof.id_perfil,limit:1});
+   if(!found.length)return fail("No existe ese registro en tu perfil.",404);
+   await db(item.table,{[item.key]:"eq."+id,id_perfil:"eq."+prof.id_perfil},null,"DELETE");
+   return response({ok:true,message:"Registro eliminado."});
+  }
+  const data={};
+  for(const field of item.fields)data[field]=field==="anio"?(input.anio?Number(input.anio):null):(safeField(input[field],250)||null);
+  if(item===itemTables.experiencia){
+   if(!data.empresa||!data.cargo)return fail("Ingresá la empresa y el cargo.");
+   if(data.fecha_inicio&&data.fecha_fin&&data.fecha_fin<data.fecha_inicio)return fail("La fecha final no puede ser anterior a la inicial.");
+  }
+  if(item===itemTables.idioma&&(!data.nombre||!data.nivel))return fail("Completá el idioma y nivel.");
+  if(item===itemTables.capacitacion&&(!data.nombre||!data.tipo))return fail("Completá el tipo y nombre de la capacitación.");
+  if(data.anio!==undefined && data.anio!==null &&(!Number.isInteger(data.anio)||data.anio<1900||data.anio>2100))return fail("Año inválido.");
+  if(id){
+   const found=await db(item.table,{select:item.key,[item.key]:"eq."+id,id_perfil:"eq."+prof.id_perfil,limit:1});
+   if(!found.length)return fail("No existe ese registro en tu perfil.",404);
+   await db(item.table,{[item.key]:"eq."+id,id_perfil:"eq."+prof.id_perfil},data,"PATCH");
+  }else await db(item.table,{},[{id_perfil:prof.id_perfil,...data}],"POST");
+  return response({ok:true,message:"Información profesional actualizada."});
+ }
+ if(action==="student-cv-upload"){
+  const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
+  const filename=safeField(input.filename,200);
+  const base64=String(input.file_base64||"");
+  if(!/\.pdf$/i.test(filename)||base64.length>7000000||base64.length<12)return fail("Seleccioná un archivo PDF de hasta 5 MB.");
+  let bytes;try{bytes=Uint8Array.from(atob(base64), c=>c.charCodeAt(0));}catch{return fail("Archivo PDF inválido.");}
+  if(bytes.length>5242880||bytes.length<5||[37,80,68,70,45].some((v,i)=>bytes[i]!==v))return fail("El archivo debe ser un PDF válido de hasta 5 MB.");
+  const path=auth.student.id_estudiante+"/"+crypto.randomUUID()+".pdf";
+  const url=BASE+"/storage/v1/object/cv-estudiantes/"+path;
+  const put=await fetch(url,{method:"POST",headers:{"apikey":ADMIN_KEY,"authorization":"Bearer "+ADMIN_KEY,"content-type":"application/pdf","x-upsert":"false"},body:bytes});
+  if(!put.ok){console.error("Storage upload failed",put.status);return fail("No se pudo guardar el archivo PDF.",502);}
+  const old=(await db("curriculum_vitae",{select:"id_cv,ruta_archivo",id_estudiante:"eq."+auth.student.id_estudiante,limit:1}))[0];
+  try{
+   const cv={nombre_archivo:filename,formato:"PDF",tamano_bytes:bytes.length,ruta_archivo:path,fecha_carga:new Date().toISOString()};
+   if(old) await db("curriculum_vitae",{id_cv:"eq."+old.id_cv},cv,"PATCH");
+   else await db("curriculum_vitae",{},[{id_estudiante:auth.student.id_estudiante,...cv}],"POST");
+  }catch(err){
+    await fetch(url,{method:"DELETE",headers:{"apikey":ADMIN_KEY,"authorization":"Bearer "+ADMIN_KEY}}).catch(()=>{});
+    throw err;
+  }
+  if(old?.ruta_archivo){
+   await fetch(BASE+"/storage/v1/object/cv-estudiantes/"+old.ruta_archivo,{method:"DELETE",headers:{"apikey":ADMIN_KEY,"authorization":"Bearer "+ADMIN_KEY}}).catch(()=>{});
+  }
+  return response({ok:true,message:"Currículum guardado correctamente."});
+ }
+ if(action==="student-cv-view"){
+  const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
+  const cv=(await db("curriculum_vitae",{select:"ruta_archivo",id_estudiante:"eq."+auth.student.id_estudiante,limit:1}))[0];
+  if(!cv)return fail("Todavía no cargaste tu currículum.",404);
+  const r=await fetch(BASE+"/storage/v1/object/sign/cv-estudiantes/"+cv.ruta_archivo,{method:"POST",headers:{"apikey":ADMIN_KEY,"authorization":"Bearer "+ADMIN_KEY,"content-type":"application/json"},body:JSON.stringify({expiresIn:120})});
+  const payload=await r.json();
+  if(!r.ok||!payload.signedURL)return fail("No se pudo abrir el currículum.",502);
+  const path=payload.signedURL.startsWith("/")?payload.signedURL:"/storage/v1"+(payload.signedURL.startsWith("/")?"":"/")+payload.signedURL;
+  return response({ok:true,url:new URL(path,BASE).href});
+ }
+ if(action==="student-applications"){
+  const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
+  const items=await db("postulacion",{select:"id_postulacion,id_oferta,estado,fecha_postulacion,fecha_retiro,oferta_laboral(titulo,tipo,estado,fecha_vencimiento)",id_estudiante:"eq."+auth.student.id_estudiante,order:"fecha_postulacion.desc",limit:100});
+  return response({ok:true,items});
+ }
+ if(action==="student-apply"){
+  const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
+  const id=numberId(input.offer_id);if(!id)return fail("Oferta inválida.");
+  const arr=await db("oferta_laboral",{select:"id_oferta,id_empresa,estado,fecha_vencimiento,vigencia_indefinida",id_oferta:"eq."+id,limit:1});
+  const offer=arr[0];
+  if(!offer||offer.estado!=="Publicada"||!offer.id_empresa||(!offer.vigencia_indefinida&&offer.fecha_vencimiento&&offer.fecha_vencimiento<new Date().toISOString().slice(0,10)))return fail("La oferta no admite postulaciones.",409);
+  const cv=await db("curriculum_vitae",{select:"id_cv",id_estudiante:"eq."+auth.student.id_estudiante,limit:1});
+  if(!cv.length)return fail("Primero tenés que cargar tu currículum.",409);
+  const previous=await db("postulacion",{select:"id_postulacion",id_estudiante:"eq."+auth.student.id_estudiante,id_oferta:"eq."+id,limit:1});
+  if(previous.length)return fail("Ya te postulaste a esta oferta y no podés volver a postularte.",409);
+  try{await db("postulacion",{},[{id_estudiante:auth.student.id_estudiante,id_oferta:id,estado:"Activa"}],"POST");}
+  catch{return fail("No se pudo postular. Verificá si ya existe una postulación.",409);}
+  return response({ok:true,message:"Postulación registrada correctamente."});
+ }
+ if(action==="student-withdraw"){
+  const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
+  const id=numberId(input.application_id);if(!id)return fail("Postulación inválida.");
+  const arr=await db("postulacion",{select:"id_postulacion,estado",id_postulacion:"eq."+id,id_estudiante:"eq."+auth.student.id_estudiante,limit:1});
+  if(!arr.length||arr[0].estado!=="Activa")return fail("Esta postulación ya no se puede retirar.",409);
+  await db("postulacion",{id_postulacion:"eq."+id,id_estudiante:"eq."+auth.student.id_estudiante,estado:"eq.Activa"},{estado:"Retirada",fecha_retiro:new Date().toISOString()},"PATCH");
+  return response({ok:true,message:"Postulación retirada. No podrás volver a postularte a la misma oferta."});
+ }
+ if(action==="password-change"){
+  const claims=await sessionFrom(req);if(!claims)return fail("Iniciá sesión.",401);
+  const users=await db("usuario",{select:"id_usuario,contrasena_hash,habilitado",id_usuario:"eq."+claims.id,limit:1});
+  const u=users[0];if(!u||!u.habilitado)return fail("La cuenta no está habilitada.",403);
+  const current=String(input.current_password||""),pass=String(input.new_password||"");
+  if(pass.length<8||pass.length>72)return fail("La nueva contraseña debe tener entre 8 y 72 caracteres.");
+  if(!(await matchPass(current,u.contrasena_hash)))return fail("La contraseña actual no es correcta.",401);
+  await db("usuario",{id_usuario:"eq."+u.id_usuario},{contrasena_hash:await passHash(pass)},"PATCH");
+  return response({ok:true,message:"Contraseña actualizada."});
+ }
+
  return fail("Acción no reconocida.",404);
  }catch(err){console.error("API request error",err?.message);return fail("Ocurrió un error al procesar la solicitud.",500);}
 });
