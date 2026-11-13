@@ -50,6 +50,8 @@ function shell({items,active,person,identifier,role,title,description,contentId,
 document.addEventListener('click',e=>{
  const toggle=e.target.closest('[data-dashboard-menu]');
  if(toggle){const aside=document.getElementById('dashboard-sidebar');if(!aside)return;const open=aside.classList.toggle('is-open');toggle.setAttribute('aria-expanded',String(open));return;}
+ const route=e.target.closest('[data-workspace-route]');
+ if(route){navigate('perfil/'+route.dataset.workspaceRoute);return;}
  if(e.target.closest('[data-dashboard-logout]')){document.getElementById('logout')?.click();return;}
  if(!e.target.closest('.dashboard-sidebar')&&!e.target.closest('[data-workspace-route]')){
   document.getElementById('dashboard-sidebar')?.classList.remove('is-open');
