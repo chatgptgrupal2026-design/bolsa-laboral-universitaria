@@ -68,7 +68,7 @@
       <div class="auth-page"><div class="auth-shell"><div class="auth-intro"><span class="eyebrow dark">ACCESO A LA PLATAFORMA</span><h1>Bienvenido nuevamente</h1><p>Ingresá para acceder a las oportunidades laborales y gestionar tu perfil universitario.</p><div class="auth-decoration" aria-hidden="true">✦</div></div><div class="auth-panel">
         <div class="auth-heading"><span class="auth-mini-logo">FCT</span><h2>Iniciar sesión</h2><p>Ingresá tus credenciales para continuar.</p></div>
         <form id="login-form" novalidate>
-          <div class="field"><label for="login-user">Usuario o matrícula</label><input id="login-user" name="usuario" placeholder="Ingresá tu usuario o matrícula" autocomplete="username" required /></div>
+          <div class="field"><label for="login-user">Usuario o matrícula</label><input id="login-user" name="usuario" placeholder="Ej.: c06559" autocapitalize="off" spellcheck="false" autocomplete="username" required /></div>
           <div class="field"><label for="login-password">Contraseña</label><input id="login-password" name="password" type="password" placeholder="Ingresá tu contraseña" autocomplete="current-password" required /></div>
           <div class="form-options"><label class="checkbox-label"><input id="remember" type="checkbox" /> Recordar mi sesión</label><button type="button" class="text-button" id="forgot-password">¿Olvidaste tu contraseña?</button></div>
           <div class="alert hidden" id="login-alert" role="alert"></div>
@@ -80,10 +80,10 @@
 
     <section class="screen hidden" id="screen-registro" data-screen="registro">
       <div class="section-banner short"><div class="wrap"><span class="eyebrow">ESTUDIANTES</span><h1>Registro de estudiante</h1><p>Creá tu cuenta con los datos verificados por el sistema académico simulado.</p></div></div>
-      <div class="wrap register-layout"><div class="register-help"><div class="info-card"><div class="feature-icon">◎</div><h2>Comenzá tu camino profesional</h2><p>Al registrarte, tu matrícula y cédula se verifican contra los datos académicos simulados para esta etapa del proyecto.</p><div class="demo-box"><strong>Datos de demostración</strong><p>Matrícula: <code>20260001</code><br />Cédula: <code>9000001</code></p><small>La cuenta de prueba se puede registrar una única vez. Usá un correo de prueba propio.</small></div></div></div>
+      <div class="wrap register-layout"><div class="register-help"><div class="info-card"><div class="feature-icon">◎</div><h2>Comenzá tu camino profesional</h2><p>Al registrarte, tu matrícula y cédula se verifican contra los datos académicos simulados para esta etapa del proyecto.</p><div class="demo-box"><strong>Datos de demostración</strong><p>Matrícula: <code>c06559</code><br />Cédula de prueba: <code>9000002</code></p><small>Datos completamente ficticios del simulador académico; no corresponden a personas reales. Cada cuenta de prueba puede registrarse una sola vez.</small></div></div></div>
       <form id="register-form" class="register-card" novalidate><h2>Crear mi cuenta</h2><p class="muted">Completá los siguientes datos para continuar.</p>
         <div class="field-grid">
-          <div class="field"><label for="reg-matricula">Matrícula <em>*</em></label><input id="reg-matricula" name="matricula" inputmode="numeric" placeholder="N.º de matrícula" required /></div>
+          <div class="field"><label for="reg-matricula">Matrícula <em>*</em></label><input id="reg-matricula" name="matricula" inputmode="text" placeholder="Ej.: c06559" autocapitalize="off" spellcheck="false" maxlength="15" required /></div>
           <div class="field"><label for="reg-cedula">Cédula de identidad <em>*</em></label><input id="reg-cedula" name="cedula" inputmode="numeric" placeholder="N.º de cédula" required /></div>
         </div>
         <div class="field"><label for="reg-email">Correo electrónico <em>*</em></label><input id="reg-email" type="email" name="correo" placeholder="nombre@correo.com" autocomplete="email" required /></div>
