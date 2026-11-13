@@ -4,7 +4,7 @@
 const H=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const val=(o,k)=>H(o?.[k]??'');
 let data=null;
-let activeTab='academico';
+let activeTab='inicio';
 let loading=false;
 let editing={};
 const el=()=>document.getElementById('student-area');
@@ -15,22 +15,59 @@ async function load(){
  catch(e){if(el())el().innerHTML='<div class="alert">'+H(e.message)+'</div>';}
  finally{loading=false;}
 }
-function nav(tab){activeTab=tab;render();}
+const sections=[
+ {id:'inicio',label:'Inicio',icon:'inicio',description:'Un resumen de tu información y tus próximas oportunidades.'},
+ {id:'academico',label:'Perfil académico',icon:'academico',description:'Consultá tus datos universitarios y actualizá tu información de contacto.'},
+ {id:'profesional',label:'Perfil profesional',icon:'profesional',description:'Organizá tu experiencia, habilidades, idiomas y formación.'},
+ {id:'curriculum',label:'Mi currículum',icon:'curriculum',description:'Gestioná tu CV en PDF de manera segura.'},
+ {id:'postulaciones',label:'Mis postulaciones',icon:'postulaciones',description:'Seguí tus solicitudes y consultá su estado.'},
+ {id:'seguridad',label:'Seguridad',icon:'seguridad',description:'Gestioná la contraseña de acceso a tu cuenta.'}
+];
+function select(tab){
+ const next=sections.some(x=>x.id===tab)?tab:'inicio';
+ if(activeTab!==next || !document.getElementById('student-content')){
+  activeTab=next;
+  if(data)render();
+ }
+}
+function nav(tab){navigate('perfil/'+tab);}
 function render(){
  const root=el();if(!root||!getToken()||!data)return;
- const tabs=[
- ['academico','Perfil académico'],['profesional','Perfil profesional'],
- ['curriculum','Mi currículum'],['postulaciones','Mis postulaciones'],['seguridad','Seguridad']
- ];
- root.innerHTML='<div class="student-workspace"><div class="student-tabs" role="tablist" aria-label="Mi espacio">'+
- tabs.map(([id,label])=>'<button class="student-tab '+(id===activeTab?'chosen':'')+'" data-student-tab="'+id+'" role="tab" aria-selected="'+(id===activeTab)+'">'+label+'</button>').join('')+
- '</div><div id="student-message" class="alert hidden" role="status"></div><div id="student-content" class="student-content"></div></div>';
+ const section=sections.find(x=>x.id===activeTab)||sections[0];
+ const student=data.student||{};
+ root.innerHTML=window.BolsaWorkspace.shell({
+   items:sections,active:section.id,
+   person:[student.nombre,student.apellido].filter(Boolean).join(' ')||'Estudiante',
+   identifier:student.matricula,role:'Estudiante',
+   title:section.id==='inicio'?'Bienvenido a tu espacio':section.label,
+   description:section.description,contentId:'student-content',messageId:'student-message'
+ });
  const c=document.getElementById('student-content');
+ if(activeTab==='inicio')c.innerHTML=home();
  if(activeTab==='academico')c.innerHTML=academic();
  if(activeTab==='profesional')c.innerHTML=professional();
  if(activeTab==='curriculum')c.innerHTML=curriculum();
  if(activeTab==='postulaciones'){c.innerHTML='<div class="status-message">Consultando tus postulaciones...</div>';fetchApplications();}
  if(activeTab==='seguridad')c.innerHTML=security();
+}
+function home(){
+ const s=data.student||{},cv=data.cv,prof=data.professional||{};
+ const complete=Boolean(prof.habilidades||prof.tecnologias||prof.disponibilidad_laboral);
+ const count=(data.experiencias||[]).length;
+ return '<section class="dashboard-welcome"><div><span class="dashboard-kicker">TU FUTURO PROFESIONAL EMPIEZA AQUÍ</span>'+
+ '<h2>¡Hola, '+H(s.nombre||'estudiante')+'!</h2><p>Administrá tu perfil y preparate para nuevas oportunidades laborales y pasantías.</p>'+
+ '<button type="button" class="btn btn-accent" data-go-offers>Explorar ofertas ↗</button></div>'+
+ '<div class="dashboard-welcome-symbol" aria-hidden="true">✦</div></section>'+
+ '<div class="dashboard-metrics">'+
+ '<div class="dashboard-metric"><span>Perfil académico</span><strong>'+H(s.matricula||'Registrado')+'</strong><small>Información universitaria</small></div>'+
+ '<div class="dashboard-metric"><span>Perfil profesional</span><strong>'+(complete?'En desarrollo':'Por completar')+'</strong><small>'+count+' experiencia(s) registrada(s)</small></div>'+
+ '<div class="dashboard-metric"><span>Currículum vitae</span><strong>'+(cv?'PDF cargado':'Pendiente')+'</strong><small>'+(cv?H(cv.nombre_archivo):'Agregá tu archivo de hasta 5 MB')+'</small></div>'+
+ '</div><div class="dashboard-section-heading"><h2>Accesos rápidos</h2><p>Continuá donde lo dejaste</p></div>'+
+ '<div class="dashboard-quick-grid">'+
+ '<button class="dashboard-quick-card" type="button" data-student-tab="academico"><span class="quick-icon">'+window.BolsaWorkspace.icon('academico')+'</span><strong>Actualizar perfil académico</strong><small>Datos personales y de la facultad</small><span class="quick-action">Abrir sección →</span></button>'+
+ '<button class="dashboard-quick-card" type="button" data-student-tab="profesional"><span class="quick-icon">'+window.BolsaWorkspace.icon('profesional')+'</span><strong>Completar perfil profesional</strong><small>Experiencia, habilidades y cursos</small><span class="quick-action">Abrir sección →</span></button>'+
+ '<button class="dashboard-quick-card" type="button" data-student-tab="curriculum"><span class="quick-icon">'+window.BolsaWorkspace.icon('curriculum')+'</span><strong>Gestionar mi currículum</strong><small>Cargá o reemplazá tu PDF</small><span class="quick-action">Abrir sección →</span></button>'+
+ '</div>';
 }
 function field(id,label,value,opts={}){
  const extra=opts.readonly?' readonly':'';
@@ -40,12 +77,27 @@ function field(id,label,value,opts={}){
 }
 function academic(){
  const s=data.student;
- return '<h2>Mi perfil académico</h2><p class="muted">Los datos verificados por el sistema académico no se pueden modificar.</p>'+
- '<form id="academic-form" class="student-form"><div class="field-grid">'+field('academico-matricula','Matrícula',s.matricula,{readonly:true})+field('academico-cedula','Cédula',s.cedula,{readonly:true})+field('academico-nombre','Nombre',s.nombre,{readonly:true})+field('academico-apellido','Apellido',s.apellido,{readonly:true})+'</div>'+
- '<div class="field-grid">'+field('academico-email','Correo electrónico',s.correo,{type:'email',required:true})+field('academico-telefono','Teléfono',s.telefono,{type:'tel'})+field('academico-fecha','Fecha de nacimiento',s.fecha_nacimiento,{type:'date'})+
- '<div class="field"><label for="academico-carrera">Carrera</label><select id="academico-carrera" name="id_carrera" required>'+data.carreras.map(c=>'<option value="'+c.id_carrera+'" '+(c.id_carrera===s.id_carrera?'selected':'')+'>'+H(c.nombre)+'</option>').join('')+'</select></div></div>'+
- '<div class="field"><label for="academico-semestre">Semestre actual</label><input id="academico-semestre" type="number" min="1" max="20" value="'+H(s.semestre_actual??'')+'" placeholder="Ej.: 5" /></div>'+
- '<button class="btn btn-primary" type="submit">Guardar perfil académico</button></form>';
+ return '<div class="dashboard-form-stack">'+
+  '<section class="dashboard-detail-card">'+
+   '<div class="dashboard-card-heading"><div><span class="dashboard-card-kicker">INFORMACIÓN VERIFICADA</span><h2>Datos universitarios</h2><p>Estos datos provienen del registro académico simulado y no se pueden modificar.</p></div><span class="dashboard-locked-pill">'+window.BolsaWorkspace.icon('seguridad')+' Verificados</span></div>'+
+   '<div class="field-grid dashboard-readonly-grid">'+
+    field('academico-matricula','Matrícula',s.matricula,{readonly:true})+
+    field('academico-cedula','Cédula de identidad',s.cedula,{readonly:true})+
+    field('academico-nombre','Nombre',s.nombre,{readonly:true})+
+    field('academico-apellido','Apellido',s.apellido,{readonly:true})+
+   '</div></section>'+
+  '<section class="dashboard-detail-card">'+
+   '<div class="dashboard-card-heading"><div><span class="dashboard-card-kicker">INFORMACIÓN EDITABLE</span><h2>Datos personales y académicos</h2><p>Mantené actualizados tus datos de contacto y tu situación académica.</p></div></div>'+
+   '<form id="academic-form" class="student-form"><div class="field-grid">'+
+    field('academico-email','Correo electrónico',s.correo,{type:'email',required:true})+
+    field('academico-telefono','Teléfono',s.telefono,{type:'tel'})+
+    field('academico-fecha','Fecha de nacimiento',s.fecha_nacimiento,{type:'date'})+
+    '<div class="field"><label for="academico-carrera">Carrera</label><select id="academico-carrera" name="id_carrera" required>'+data.carreras.map(c=>'<option value="'+c.id_carrera+'" '+(c.id_carrera===s.id_carrera?'selected':'')+'>'+H(c.nombre)+'</option>').join('')+'</select></div>'+
+   '</div><div class="dashboard-semester-field">'+
+    '<div class="field"><label for="academico-semestre">Semestre actual</label><input id="academico-semestre" type="number" min="1" max="20" value="'+H(s.semestre_actual??'')+'" placeholder="Ej.: 5" /></div>'+
+   '</div><div class="dashboard-form-actions"><span>Los cambios se guardarán en tu perfil.</span><button class="btn btn-primary" type="submit">Guardar cambios</button></div></form>'+
+  '</section>'+
+ '</div>';
 }
 function professional(){
  const p=data.professional||{};
@@ -120,6 +172,7 @@ async function perform(action,body,message){
 }
 document.addEventListener('click',async e=>{
  const tab=e.target.closest('[data-student-tab]');if(tab){nav(tab.dataset.studentTab);return;}
+ if(e.target.closest('[data-go-offers]')){navigate('ofertas');return;}
  const add=e.target.closest('[data-add-item]');if(add){editing[add.dataset.addItem]={id:null,values:{}};render();return;}
  const cancel=e.target.closest('[data-cancel-item]');if(cancel){delete editing[cancel.dataset.cancelItem];render();return;}
  const edit=e.target.closest('[data-edit-item]');if(edit){
@@ -197,8 +250,16 @@ document.addEventListener('submit',async e=>{
  }
 });
 window.BolsaStudent={
- open(){if(!getToken())return;const root=el();if(!root)return;root.innerHTML='<div class="status-message">Cargando información del estudiante...</div>';load();},
- clear(){data=null;editing={};if(el())el().innerHTML='';},
+ open(){
+  if(!getToken())return;
+  const root=el();if(!root)return;
+  const route=location.hash.replace(/^#/,'').split('/');
+  activeTab=sections.some(x=>x.id===route[1])?route[1]:'inicio';
+  root.innerHTML='<div class="status-message">Cargando información del estudiante...</div>';
+  load();
+ },
+ select,
+ clear(){data=null;activeTab='inicio';editing={};if(el())el().innerHTML='';},
  showOffer
 };
 
