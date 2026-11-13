@@ -8,6 +8,7 @@
   <title>Bolsa de Trabajo | Facultad de Ciencias y Tecnología</title>
   <link rel="stylesheet" href="./styles.css" />
   <script defer src="./app.js"></script>
+  <script defer src="./workspace.js"></script>
   <script defer src="./student.js"></script>
   <script defer src="./portal.js"></script>
 </head>
@@ -153,7 +154,14 @@
       </div>
     </section>
 
-    <section class="screen hidden" id="screen-perfil" data-screen="perfil"><div class="section-banner short"><div class="wrap"><span class="eyebrow">ÁREA PERSONAL</span><h1>Mi espacio</h1><p>Tu acceso a la Bolsa de Trabajo Universitaria.</p></div></div><div class="wrap content-section"><div id="profile-card" class="profile-card"><p>Cargando perfil...</p></div><div id="student-area"></div><div id="portal-area"></div><button class="btn btn-secondary" id="logout">Cerrar sesión</button></div></section>
+    <section class="screen hidden workspace-screen" id="screen-perfil" data-screen="perfil">
+      <div class="wrap dashboard-page-wrap">
+        <div id="profile-card" class="profile-card"><p>Cargando tu espacio...</p></div>
+        <div id="student-area"></div>
+        <div id="portal-area"></div>
+        <button type="button" id="logout" class="hidden">Cerrar sesión</button>
+      </div>
+    </section>
   </main>
   <dialog id="offer-modal" aria-label="Detalle de la oferta laboral"></dialog>
 
