@@ -2,7 +2,7 @@
 const API = 'https://fxbhnyvlekulmuvvmrlr.supabase.co/functions/v1/bolsa-api';
 const state = {screen: 'inicio', offers: [], profile: null, token: ''};
 const $ = (selector) => document.querySelector(selector);
-const screens = new Set(['inicio', 'ofertas', 'registro', 'login', 'perfil']);
+const screens = new Set(['inicio', 'ofertas', 'registro', 'login', 'perfil', 'compartir']);
 const getToken = () => sessionStorage.getItem('bolsa-token') || localStorage.getItem('bolsa-token') || '';
 function clean(text) {return String(text ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function setAlert(id, message, success = false){const el = $(id);el.textContent = message;el.className = 'alert' + (success ? ' success' : '');}
@@ -34,7 +34,8 @@ function navigate(to){
   history.replaceState(null,'','#'+to);
   window.scrollTo({top:0,behavior:'instant'});
   if(to==='ofertas') loadOffers();
-  if(to==='perfil') {loadProfile();window.BolsaStudent?.open();}
+  if(to==='perfil')loadProfile();
+  if(to==='compartir')window.BolsaPortal?.populateShareCareers();
 }
 function updateHeader(){
  const loggedIn=Boolean(getToken());
@@ -78,10 +79,12 @@ async function loadProfile(){
  card.textContent='Cargando perfil...';
  try{const data=await request('me',{},true);state.profile=data.profile;
  const perfil=data.profile;const student=perfil.estudiante;
+ if(perfil.tipo==='Estudiante'){window.BolsaPortal?.clear();window.BolsaStudent?.open();}
+ else{window.BolsaStudent?.clear();window.BolsaPortal?.open(perfil.tipo);}
  card.innerHTML=`<span class="eyebrow dark">CU02 · SESIÓN ACTIVA</span><h2>¡Bienvenido${student?', '+clean(student.nombre):''}!</h2><p>Accediste correctamente como <strong>${clean(perfil.tipo)}</strong>.</p><p><strong>Usuario:</strong> ${clean(perfil.usuario)}</p>${student?`<p><strong>Nombre:</strong> ${clean(student.nombre)} ${clean(student.apellido)}</p><p><strong>Matrícula:</strong> ${clean(student.matricula)}</p>`:''}<div class="status-message">Módulos de perfil académico, CV y postulaciones: próximos casos de uso.</div>`;
  }catch(err){card.textContent=err.message; if(/sesión|cuenta/i.test(err.message)){logout(false);navigate('login');}}
 }
-function logout(navigateAway=true){localStorage.removeItem('bolsa-token');sessionStorage.removeItem('bolsa-token');state.token='';state.profile=null;window.BolsaStudent?.clear();updateHeader();if(navigateAway) navigate('inicio');}
+function logout(navigateAway=true){localStorage.removeItem('bolsa-token');sessionStorage.removeItem('bolsa-token');state.token='';state.profile=null;window.BolsaStudent?.clear();window.BolsaPortal?.clear();updateHeader();if(navigateAway) navigate('inicio');}
 for(const btn of document.querySelectorAll('[data-nav]')) btn.addEventListener('click',e=>{e.preventDefault();navigate(btn.dataset.nav);});
 $('#filter-type').addEventListener('change',renderOffers);
 $('#filter-career').addEventListener('change',renderOffers);
