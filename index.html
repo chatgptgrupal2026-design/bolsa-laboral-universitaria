@@ -8,6 +8,7 @@
   <title>Bolsa de Trabajo | Facultad de Ciencias y Tecnología</title>
   <link rel="stylesheet" href="./styles.css" />
   <script defer src="./app.js"></script>
+  <script defer src="./student.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -58,7 +59,7 @@
     <section class="screen hidden" id="screen-ofertas" data-screen="ofertas">
       <div class="section-banner"><div class="wrap"><span class="eyebrow">BOLSA DE TRABAJO</span><h1>Ofertas laborales y pasantías</h1><p>Encontrá oportunidades que se adapten a tu formación.</p></div></div>
       <div class="wrap content-section">
-        <div class="filter-bar"><div class="input-wrap"><label for="filter-type">Tipo de oportunidad</label><select id="filter-type"><option value="">Todas las ofertas</option><option value="Empleo">Empleo</option><option value="Pasantía">Pasantía</option></select></div><button id="clear-filters" class="text-button">Limpiar filtros</button></div>
+        <div class="filter-bar"><div class="input-wrap"><label for="filter-type">Tipo de oportunidad</label><select id="filter-type"><option value="">Todas las ofertas</option><option value="Empleo">Empleo</option><option value="Pasantía">Pasantía</option></select></div><div class="input-wrap"><label for="filter-career">Carrera</label><select id="filter-career"><option value="">Todas las carreras</option></select></div><button id="clear-filters" class="text-button">Limpiar filtros</button></div>
         <div id="offers-status" class="status-message" role="status">Cargando ofertas...</div>
         <div id="offers-list" class="offer-grid"></div>
       </div>
@@ -94,8 +95,9 @@
       </form></div>
     </section>
 
-    <section class="screen hidden" id="screen-perfil" data-screen="perfil"><div class="section-banner short"><div class="wrap"><span class="eyebrow">ÁREA PERSONAL</span><h1>Mi espacio</h1><p>Tu acceso a la Bolsa de Trabajo Universitaria.</p></div></div><div class="wrap content-section"><div id="profile-card" class="profile-card"><p>Cargando perfil...</p></div><button class="btn btn-secondary" id="logout">Cerrar sesión</button></div></section>
+    <section class="screen hidden" id="screen-perfil" data-screen="perfil"><div class="section-banner short"><div class="wrap"><span class="eyebrow">ÁREA PERSONAL</span><h1>Mi espacio</h1><p>Tu acceso a la Bolsa de Trabajo Universitaria.</p></div></div><div class="wrap content-section"><div id="profile-card" class="profile-card"><p>Cargando perfil...</p></div><div id="student-area"></div><button class="btn btn-secondary" id="logout">Cerrar sesión</button></div></section>
   </main>
+  <dialog id="offer-modal" aria-label="Detalle de la oferta laboral"></dialog>
 
   <footer><div class="wrap footer-content"><div><strong>Bolsa de Trabajo Universitaria</strong><p>Facultad de Ciencias y Tecnología · Proyecto académico 2026</p></div><span>Desarrollado para Ingeniería del Software 2</span></div></footer>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
