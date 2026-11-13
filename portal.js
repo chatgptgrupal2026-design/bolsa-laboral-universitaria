@@ -168,9 +168,16 @@ function security(){
  '<button class="btn btn-primary" type="submit">Cambiar contraseña</button></form>';
 }
 async function perform(action,payload){
- try{const resp=await request(action,payload,true);await load();message(resp.message||'Operación completada.');
- if(resp.temporary_password)message('Cuenta '+resp.username+' creada. Contraseña temporal (copiala ahora; no se envió por correo): '+resp.temporary_password);
- return true;
+ try{
+  const resp=await request(action,payload,true);
+  if(action==='company-offer-save')editingOffer=null;
+  if(action==='reviewer-approved-save')reviewOffer=null;
+  if(action.startsWith('secretary-'))window._portalForm='';
+  await load();
+  message(resp.temporary_password
+   ?'Cuenta '+resp.username+' creada. Contraseña temporal (guardala ahora; no se envió por correo): '+resp.temporary_password
+   :(resp.message||'Operación completada.'));
+  return true;
  }catch(e){message(e.message,true);return false;}
 }
 async function readFile(file,limits=['pdf','png','jpg','jpeg']){
@@ -245,21 +252,19 @@ document.addEventListener('submit',async e=>{
   const d=Object.fromEntries(new FormData(f));d.carreras=[...document.getElementById('portal-carreras').selectedOptions].map(o=>Number(o.value));
   d.vigencia_indefinida=document.getElementById('portal-indefinida').checked;
   d.offer_id=editingOffer?.id_oferta||null;
-  const ok=await perform('company-offer-save',d);if(ok){editingOffer=null;render();}
+  await perform('company-offer-save',d);
  }else if(f.id==='approved-edit-form'){
   e.preventDefault();
   const d=Object.fromEntries(new FormData(f));
   d.offer_id=reviewOffer?.offer.id_oferta;
   d.carreras=[...document.getElementById('portal-carreras').selectedOptions].map(o=>Number(o.value));
-  const ok=await perform('reviewer-approved-save',d);
-  if(ok)reviewOffer=null;
+  await perform('reviewer-approved-save',d);
  }else if(f.id==='portal-admin-form'){
   e.preventDefault();
   const d=Object.fromEntries(new FormData(f));
   const action=f.dataset.adminAction;d.id=Number(f.dataset.adminId);
   if(action.endsWith('-update'))d.habilitado=Boolean(f.querySelector('[name="habilitado"]').checked);
-  const ok=await perform(action,d);
-  if(ok){window._portalForm='';render();}
+  await perform(action,d);
  }else if(f.id==='portal-password-form'){
   e.preventDefault();const d=Object.fromEntries(new FormData(f));
   if(d.new_password.length<8||d.new_password!==d.repeat_password){message('Las contraseñas no coinciden o son demasiado cortas.',true);return;}
