@@ -40,22 +40,83 @@ async function load(){
   render();
  }catch(e){root().innerHTML='<div class="alert">'+E(e.message)+'</div>';}
 }
+const menuForRole=()=>isCompany()?
+ [
+ {id:'inicio',label:'Inicio',icon:'inicio',description:'Información general y accesos rápidos de tu empresa.'},
+ {id:'empresa',label:'Mi empresa',icon:'empresa',description:'Consultá y actualizá los datos de tu empresa verificada.'},
+ {id:'ofertas',label:'Mis ofertas',icon:'ofertas',description:'Publicá y administrá ofertas y consultá postulantes.'},
+ {id:'seguridad',label:'Seguridad',icon:'seguridad',description:'Actualizá la contraseña de tu cuenta.'}
+ ]:[
+ {id:'inicio',label:'Inicio',icon:'inicio',description:'Resumen de gestiones y ofertas del sistema.'},
+ {id:'pendientes',label:'Ofertas pendientes',icon:'pendientes',description:'Revisá las ofertas remitidas por empresas sin cuenta.'},
+ {id:'aprobadas',label:'Ofertas aprobadas',icon:'aprobadas',description:'Gestioná las ofertas aprobadas de empresas externas.'},
+ ...(isSecretary()?[
+ {id:'empresas',label:'Empresas verificadas',icon:'empresas',description:'Administrá las empresas habilitadas en la plataforma.'},
+ {id:'revisores',label:'Usuarios revisores',icon:'revisores',description:'Gestioná los usuarios del Centro de Estudiantes y Secretaría.'}
+ ]:[]),
+ {id:'seguridad',label:'Seguridad',icon:'seguridad',description:'Actualizá la contraseña de tu cuenta.'}
+ ];
 function open(newRole){
  role=newRole;
  if(!isCompany()&&!isReviewer())return;
- if(!tab||!((isCompany()&&['empresa','ofertas','seguridad'].includes(tab))||(isReviewer()&&['pendientes','aprobadas','empresas','revisores','seguridad'].includes(tab))))
- tab=isCompany()?'empresa':'pendientes';
+ const requested=location.hash.replace(/^#/,'').split('/')[1];
+ tab=menuForRole().some(x=>x.id===requested)?requested:'inicio';
  root().innerHTML='<div class="status-message">Cargando panel...</div>';
  load();
 }
-function clear(){role='';tab='';view=null;editingOffer=null;reviewOffer=null;selectedApplicants=null;if(root())root().innerHTML='';}
-function go(t){tab=t;editingOffer=null;reviewOffer=null;selectedApplicants=null;render();}
+function select(nextTab){
+ if(!role||!view)return;
+ const valid=menuForRole().some(x=>x.id===nextTab)?nextTab:'inicio';
+ if(valid===tab && document.getElementById('portal-content'))return;
+ tab=valid;editingOffer=null;reviewOffer=null;selectedApplicants=null;window._portalForm='';
+ render();
+}
+function clear(){role='';tab='inicio';view=null;editingOffer=null;reviewOffer=null;selectedApplicants=null;window._portalForm='';if(root())root().innerHTML='';}
+function go(t){navigate('perfil/'+t);}
+function portalHome(){
+ const label=isCompany()?'Gestión de empresa':'Gestión de revisión';
+ const stats=isCompany()?[
+  ['Ofertas publicadas',(view.offers||[]).filter(o=>o.estado==='Publicada').length,'Consultá y actualizá tus vacantes'],
+  ['Ofertas registradas',(view.offers||[]).length,'Historial de publicaciones'],
+  ['Estado de la empresa',view.company?.habilitada?'Habilitada':'Sin habilitar','Cuenta verificada en la plataforma']
+ ]:[
+  ['Pendientes',(view.pending||[]).length,'Esperan evaluación'],
+  ['Ofertas aprobadas',(view.approved||[]).length,'Ofertas externas vigentes'],
+  ['Instancia revisora',view.reviewer?.instancia||role,'Funciones según tus permisos']
+ ];
+ const shortcuts=isCompany()?[
+  ['empresa','Perfil de empresa','Actualizá los datos de contacto','empresa'],
+  ['ofertas','Administrar ofertas','Publicá empleos o pasantías','ofertas']
+ ]:[
+  ['pendientes','Revisar pendientes','Evaluá nuevas ofertas laborales','pendientes'],
+  ['aprobadas','Ofertas aprobadas','Consultá las publicaciones revisadas','aprobadas']
+ ];
+ return '<section class="dashboard-welcome"><div><span class="dashboard-kicker">'+E(label.toUpperCase())+'</span>'+
+ '<h2>Bienvenido a tu panel</h2><p>Realizá tus gestiones desde un solo lugar, con acceso directo a cada módulo.</p>'+
+ '<button type="button" class="btn btn-accent" data-portal-tab="'+shortcuts[0][0]+'">Comenzar gestión ↗</button></div>'+
+ '<div class="dashboard-welcome-symbol" aria-hidden="true">✦</div></section>'+
+ '<div class="dashboard-metrics">'+stats.map(([name,value,hint])=>
+ '<div class="dashboard-metric"><span>'+E(name)+'</span><strong>'+E(value)+'</strong><small>'+E(hint)+'</small></div>').join('')+'</div>'+
+ '<div class="dashboard-section-heading"><h2>Accesos rápidos</h2><p>Elegí una sección para continuar</p></div>'+
+ '<div class="dashboard-quick-grid">'+shortcuts.map(([id,name,description,icon])=>
+ '<button class="dashboard-quick-card" type="button" data-portal-tab="'+E(id)+'"><span class="quick-icon">'+window.BolsaWorkspace.icon(icon)+'</span><strong>'+E(name)+'</strong><small>'+E(description)+'</small><span class="quick-action">Abrir sección →</span></button>').join('')+'</div>';
+}
 function render(){
  if(!root()||!view)return;
- const tabs=isCompany()?[['empresa','Mi empresa'],['ofertas','Mis ofertas'],['seguridad','Seguridad']]:
- [['pendientes','Ofertas pendientes'],['aprobadas','Ofertas aprobadas'],...(isSecretary()?[['empresas','Empresas verificadas'],['revisores','Usuarios revisores']]:[]),['seguridad','Seguridad']];
- root().innerHTML='<div class="student-workspace"><div class="student-tabs">'+tabs.map(([k,n])=>'<button class="student-tab '+(tab===k?'chosen':'')+'" data-portal-tab="'+k+'">'+n+'</button>').join('')+'</div><div id="portal-message" class="alert hidden" role="status"></div><div id="portal-content" class="student-content"></div></div>';
- if(isCompany()){
+ const items=menuForRole();
+ if(!items.some(x=>x.id===tab))tab='inicio';
+ const section=items.find(x=>x.id===tab)||items[0];
+ const person=isCompany()?(view.company?.razon_social||'Mi empresa'):
+   ([view.reviewer?.nombre,view.reviewer?.apellido].filter(Boolean).join(' ')||'Revisor');
+ root().innerHTML=window.BolsaWorkspace.shell({
+  items,active:section.id,person,
+  identifier:isCompany()?(view.company?.ruc||'Empresa verificada'):(view.reviewer?.instancia||role),
+  role,title:section.id==='inicio'?'Panel de gestión':section.label,
+  description:section.description,
+  contentId:'portal-content',messageId:'portal-message'
+ });
+ if(tab==='inicio')area().innerHTML=portalHome();
+ else if(isCompany()){
   if(tab==='empresa')area().innerHTML=company();
   if(tab==='ofertas')area().innerHTML=offers();
  }else{
@@ -271,6 +332,6 @@ document.addEventListener('submit',async e=>{
   await perform('password-change',d);
  }
 });
-window.BolsaPortal={open,clear,populateShareCareers};
+window.BolsaPortal={open,select,clear,populateShareCareers};
 if(location.hash==='#compartir')populateShareCareers();
 })();
