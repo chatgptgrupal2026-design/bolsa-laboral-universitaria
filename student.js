@@ -106,11 +106,11 @@ function professional(){
  ['idioma','Idiomas',data.idiomas,'id_idioma',['nombre','nivel']],
  ['capacitacion','Cursos y certificaciones',data.capacitaciones,'id_capacitacion',['tipo','nombre','institucion','anio']]
  ];
- return '<h2>Mi perfil profesional</h2><p class="muted">Completá tu información para que las empresas la consulten cuando te postules.</p>'+
+ return '<section class="dashboard-detail-card"><div class="dashboard-card-heading"><div><span class="dashboard-card-kicker">INFORMACIÓN PROFESIONAL</span><h2>Habilidades y disponibilidad</h2><p>Completá tu información para que las empresas la consulten cuando te postules.</p></div></div>'+
  '<form id="professional-form" class="student-form"><div class="field"><label for="prof-habilidades">Habilidades</label><textarea id="prof-habilidades" rows="3" maxlength="1500" placeholder="Comunicación, trabajo en equipo...">'+H(p.habilidades)+'</textarea></div>'+
  '<div class="field"><label for="prof-tecnologias">Tecnologías</label><textarea id="prof-tecnologias" rows="3" maxlength="1500" placeholder="Herramientas y tecnologías que manejás">'+H(p.tecnologias)+'</textarea></div>'+
  '<div class="field"><label for="prof-disponibilidad">Disponibilidad laboral</label><select id="prof-disponibilidad"><option value="">Seleccionar...</option>'+['Tiempo completo','Medio tiempo','Pasantía','Por horas','A convenir'].map(x=>'<option '+(x===p.disponibilidad_laboral?'selected':'')+'>'+x+'</option>').join('')+'</select></div>'+
- '<button class="btn btn-primary" type="submit">Guardar perfil profesional</button></form>'+
+ '<div class="dashboard-form-actions"><span>Actualizá esta información cuando lo necesites.</span><button class="btn btn-primary" type="submit">Guardar cambios</button></div></form></section>'+
  collections.map(([key,title,items,idField,fields])=>collection(key,title,items,idField,fields)).join('');
 }
 const names={empresa:'Empresa',cargo:'Cargo',fecha_inicio:'Fecha de inicio',fecha_fin:'Fecha de finalización',nombre:'Nombre',nivel:'Nivel',tipo:'Tipo',institucion:'Institución',anio:'Año'};
@@ -122,19 +122,19 @@ function collection(type,title,items,key,fields){
 }
 function curriculum(){
  const cv=data.cv;
- return '<h2>Mi currículum vitae</h2><p class="muted">Podés subir o reemplazar tu CV en formato PDF (máximo 5 MB).</p>'+
+ return '<section class="dashboard-detail-card"><div class="dashboard-card-heading"><div><span class="dashboard-card-kicker">CURRÍCULUM VITAE</span><h2>Tu documento profesional</h2><p>Podés subir o reemplazar tu CV en formato PDF (máximo 5 MB).</p></div></div>'+
  (cv?'<div class="compact-item"><div><strong>'+H(cv.nombre_archivo)+'</strong><small>Subido: '+new Date(cv.fecha_carga).toLocaleDateString('es-PY')+' · '+(cv.tamano_bytes/1024).toFixed(0)+' KB</small></div><button class="btn btn-secondary" id="view-cv">Ver PDF</button></div>':'<div class="status-message">Todavía no cargaste tu currículum.</div>')+
- '<form id="cv-form" class="student-form"><div class="field"><label for="cv-file">Seleccionar PDF</label><input id="cv-file" type="file" accept="application/pdf,.pdf" required /></div><button type="submit" class="btn btn-primary">'+(cv?'Reemplazar':'Cargar')+' currículum</button></form>';
+ '<form id="cv-form" class="student-form"><div class="field"><label for="cv-file">Seleccionar PDF</label><input id="cv-file" type="file" accept="application/pdf,.pdf" required /></div><button type="submit" class="btn btn-primary">'+(cv?'Reemplazar':'Cargar')+' currículum</button></form></section>';
 }
 function security(){
- return '<h2>Cambiar contraseña</h2><p class="muted">Para proteger tu cuenta, ingresá la contraseña actual antes de guardar una nueva.</p>'+
- '<form id="password-form" class="student-form">'+field('actual-password','Contraseña actual','',{type:'password',required:true})+field('nueva-password','Nueva contraseña (mínimo 8 caracteres)','',{type:'password',required:true})+field('repetir-password','Confirmar nueva contraseña','',{type:'password',required:true})+'<button class="btn btn-primary" type="submit">Cambiar contraseña</button></form>';
+ return '<section class="dashboard-detail-card"><div class="dashboard-card-heading"><div><span class="dashboard-card-kicker">PROTECCIÓN DE LA CUENTA</span><h2>Cambiar contraseña</h2><p>Para proteger tu cuenta, ingresá la contraseña actual antes de guardar una nueva.</p></div></div>'+
+ '<form id="password-form" class="student-form">'+field('actual-password','Contraseña actual','',{type:'password',required:true})+field('nueva-password','Nueva contraseña (mínimo 8 caracteres)','',{type:'password',required:true})+field('repetir-password','Confirmar nueva contraseña','',{type:'password',required:true})+'<button class="btn btn-primary" type="submit">Cambiar contraseña</button></form></section>';
 }
 async function fetchApplications(){
  try{
   const r=await request('student-applications',{},true);
   const c=document.getElementById('student-content');if(!c||activeTab!=='postulaciones')return;
-  c.innerHTML='<h2>Mis postulaciones</h2>'+
+  c.innerHTML='<div class="dashboard-section-heading"><h2>Historial de postulaciones</h2><p>Seguimiento de tus solicitudes</p></div>'+
   (r.items.length?'<div class="compact-list">'+r.items.map(a=>{
     const o=a.oferta_laboral||{};
     return '<article class="application-item"><div><strong>'+H(o.titulo||'Oferta')+'</strong><small>'+H(o.tipo||'')+' · '+new Date(a.fecha_postulacion).toLocaleDateString('es-PY')+'</small><span class="pill">'+H(a.estado)+'</span></div><div class="compact-actions"><button type="button" class="text-button" data-open-offer="'+a.id_oferta+'">Ver oferta</button>'+(a.estado==='Activa'?'<button class="text-button danger" data-withdraw="'+a.id_postulacion+'">Retirar</button>':'')+'</div></article>';
