@@ -466,7 +466,8 @@ Deno.serve(async req => {
   if(!id||!["Aprobar","Rechazar"].includes(decision)||(decision==="Rechazar"&&!reason))return fail("Faltan datos de evaluación.");
   const offers=await db("oferta_laboral",{select:"id_oferta",id_oferta:"eq."+id,estado:"eq.Pendiente de aprobación",id_remitente:"not.is.null",limit:1});
   if(!offers.length)return fail("Esta oferta ya fue evaluada.",409);
-  const now=new Date(),expire=new Date(now.getTime()+14*86400000);
+  const now=new Date(),expire=new Date(pyDate()+"T12:00:00Z");
+  expire.setUTCDate(expire.getUTCDate()+14);
   const update=decision==="Aprobar"?{estado:"Publicada",fecha_publicacion:now.toISOString(),fecha_vencimiento:expire.toISOString().slice(0,10),vigencia_indefinida:false}:{estado:"Rechazada"};
   const done=await db("oferta_laboral",{id_oferta:"eq."+id,estado:"eq.Pendiente de aprobación"},update,"PATCH");
   if(!done.length)return fail("Esta oferta ya fue evaluada.",409);
