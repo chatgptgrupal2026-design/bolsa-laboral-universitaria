@@ -34,3 +34,7 @@ Vincular este repositorio con el proyecto **bolsa-laboral-universitaria-web-v1**
 
 ## Alcance pendiente
 CU03-CU05 perfiles y CV; CU08-CU09 y CU20 postulaciones; CU10-CU14 y CU21/CU24 empresas; CU15-CU17 y CU22-CU23 revisión; CU18-CU19 contraseñas. Implementar conforme a los documentos de la facultad.
+
+## Publicación automática verificada
+
+Este repositorio está vinculado al proyecto de Vercel mediante **Settings → Git**. Los cambios publicados en la rama `main` deben generar un despliegue automáticamente. Esta anotación se incorporó para verificar el flujo GitHub → Vercel sin modificar la interfaz de la aplicación.
