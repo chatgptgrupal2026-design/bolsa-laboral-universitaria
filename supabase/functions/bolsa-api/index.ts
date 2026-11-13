@@ -119,6 +119,10 @@ Deno.serve(async req => {
  }
  if(action==="offers"){
   const items=await db("oferta_laboral",{select:"id_oferta,titulo,tipo,descripcion,requisitos,estado,origen,fecha_publicacion,fecha_vencimiento,vigencia_indefinida",estado:"in.(Publicada,Vencida)",order:"fecha_publicacion.desc",limit:50});
+  if(items.length){
+   const links=await db("oferta_carrera",{select:"id_oferta,id_carrera,carrera(nombre)",id_oferta:"in.("+items.map(o=>o.id_oferta).join(",")+")"});
+   for(const item of items)item.carreras=links.filter(x=>x.id_oferta===item.id_oferta).map(x=>({id_carrera:x.id_carrera,nombre:x.carrera?.nombre||""}));
+  }
   return response({ok:true,items});
  }
  if(action==="register"){
@@ -169,6 +173,28 @@ Deno.serve(async req => {
   const users=await db("usuario",{select:"id_usuario,nombre_usuario,tipo_usuario,habilitado",id_usuario:"eq."+claims.id,limit:1});
   if(!users[0]||!users[0].habilitado)return fail("La cuenta no está habilitada.",403);
   return response({ok:true,profile:await userProfile(users[0])});
+ }
+
+
+ if(action==="offer-detail"){
+  const id=numberId(input.offer_id);if(!id)return fail("Oferta inválida.");
+  const offers=await db("oferta_laboral",{select:"*",id_oferta:"eq."+id,estado:"in.(Publicada,Vencida)",limit:1});
+  const offer=offers[0];if(!offer)return fail("Oferta no disponible.",404);
+  const [careers,media,reviews,employers,senders]=await Promise.all([
+   db("oferta_carrera",{select:"id_carrera,carrera(nombre)",id_oferta:"eq."+id}),
+   db("medio_postulacion",{select:"tipo,valor",id_oferta:"eq."+id}),
+   db("revision_oferta",{select:"decision,revisor(instancia)",id_oferta:"eq."+id,order:"fecha_revision.desc",limit:1}),
+   offer.id_empresa?db("empresa_verificada",{select:"razon_social",id_empresa:"eq."+offer.id_empresa,limit:1}):Promise.resolve([]),
+   offer.id_remitente?db("empresa_remitente",{select:"razon_social",id_remitente:"eq."+offer.id_remitente,limit:1}):Promise.resolve([])
+  ]);
+  return response({ok:true,offer:{
+   id_oferta:offer.id_oferta,titulo:offer.titulo,tipo:offer.tipo,descripcion:offer.descripcion,requisitos:offer.requisitos,
+   estado:offer.estado,origen:offer.origen,fecha_publicacion:offer.fecha_publicacion,
+   fecha_vencimiento:offer.fecha_vencimiento,vigencia_indefinida:offer.vigencia_indefinida,
+   verificada:Boolean(offer.id_empresa),empresa:employers[0]?.razon_social||senders[0]?.razon_social||"",
+   carreras:careers.map(c=>({id_carrera:c.id_carrera,nombre:c.carrera?.nombre||""})),
+   medios:media,aprobada_por:reviews[0]?.revisor?.instancia||""
+  }});
  }
 
  if(action==="student-dashboard"){
@@ -281,7 +307,8 @@ Deno.serve(async req => {
   const r=await fetch(BASE+"/storage/v1/object/sign/cv-estudiantes/"+cv.ruta_archivo,{method:"POST",headers:{"apikey":ADMIN_KEY,"authorization":"Bearer "+ADMIN_KEY,"content-type":"application/json"},body:JSON.stringify({expiresIn:120})});
   const payload=await r.json();
   if(!r.ok||!payload.signedURL)return fail("No se pudo abrir el currículum.",502);
-  const path=payload.signedURL.startsWith("/")?payload.signedURL:"/storage/v1"+(payload.signedURL.startsWith("/")?"":"/")+payload.signedURL;
+  const raw=String(payload.signedURL);
+  const path=/^https?:\/\//.test(raw)?raw:("/storage/v1/"+raw.replace(/^\/?storage\/v1\//,"").replace(/^\//,""));
   return response({ok:true,url:new URL(path,BASE).href});
  }
  if(action==="student-applications"){
