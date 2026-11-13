@@ -12,7 +12,7 @@ async function request(action, extras={}, useToken=false){
   const headers = {'content-type':'application/json'};
   if (useToken && getToken()) headers.authorization = 'Bearer ' + getToken();
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 15000);
+  const timer = setTimeout(() => ctrl.abort(), action==='student-cv-upload'?60000:15000);
   try {
     const res=await fetch(API,{method:'POST',headers,body:JSON.stringify({action,...extras}),signal:ctrl.signal});
     const json=await res.json().catch(()=>({ok:false,error:'No se recibió una respuesta válida del servidor.'}));
