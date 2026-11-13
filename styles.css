@@ -47,3 +47,26 @@
 .preserve-lines{white-space:pre-wrap;overflow-wrap:anywhere}
 .filter-bar{flex-wrap:wrap}
 @media(max-width:700px){.student-content{padding:22px 16px 28px}.student-tabs{padding:8px}.student-tab{padding:9px 12px}.compact-item,.application-item{flex-direction:column;align-items:flex-start;gap:8px}.collection-title{gap:12px}.modal-body{padding:24px 22px}}
+
+
+/* Portal de empresas y formulario público de ofertas */
+.register-card .field select,.register-card .field textarea{width:100%;min-height:44px;border:1px solid #cddce3;border-radius:8px;background:#fff;padding:10px 13px;color:var(--ink);outline:none;line-height:1.5}
+.register-card .field textarea{resize:vertical}
+.register-card .field select[multiple],.student-form .field select[multiple]{min-height:105px}
+.register-card .field textarea:focus,.register-card .field select:focus{border-color:#168487;box-shadow:0 0 0 3px #1ca7a41c}
+.student-content p{overflow-wrap:anywhere}
+.student-content .checkbox-label{margin-bottom:20px}
+.student-content .collection-title{margin-bottom:10px}
+.student-content .btn.danger{color:#a43d37;background:#faeeee}
+.student-content .item-form{margin:20px 0}
+#portal-area .student-content>h2{margin-bottom:8px}
+#portal-content .compact-list{margin:18px 0 25px}
+#portal-content .compact-actions{justify-content:flex-end}
+#portal-content .student-collection{scroll-margin-top:100px}
+#portal-content .student-form{max-width:100%}
+#portal-content .student-collection .btn{margin:5px 7px 6px 0}
+#portal-content .student-content .status-message{margin:16px 0}
+#portal-content .inline-actions{margin-top:18px}
+#portal-content .field small{display:block;margin-top:5px}
+@media(max-width:870px){.nav{gap:2px}.nav-link{padding:7px 9px}.nav-link.nav-login{padding:8px 12px}}
+@media(max-width:650px){.nav{overflow:auto;flex-wrap:nowrap;width:100%;padding-bottom:6px}.nav-link{white-space:nowrap}.register-card{width:100%}.register-card .field-grid{grid-template-columns:1fr}}
