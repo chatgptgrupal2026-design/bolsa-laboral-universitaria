@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./styles.css" />
   <script defer src="./app.js"></script>
   <script defer src="./student.js"></script>
+  <script defer src="./portal.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -20,6 +21,7 @@
       <nav class="nav" aria-label="Navegación principal">
         <button type="button" data-nav="inicio" class="nav-link active">Inicio</button>
         <button type="button" data-nav="ofertas" class="nav-link">Ofertas laborales</button>
+        <button type="button" data-nav="compartir" class="nav-link">Compartir oferta</button>
         <button type="button" data-nav="registro" class="nav-link">Registrarse</button>
         <button type="button" data-nav="login" class="nav-link nav-login" id="nav-session">Iniciar sesión</button>
       </nav>
@@ -52,7 +54,7 @@
           <article class="feature"><div class="feature-icon">◇</div><h3>Construí tu perfil</h3><p>Registrá tus datos académicos y profesionales y prepará tu CV.</p></article>
           <article class="feature"><div class="feature-icon">↗</div><h3>Postulate</h3><p>Accedé a ofertas de empresas verificadas mediante la plataforma.</p></article>
         </div>
-        <div class="secondary-panel"><div><h3>¿Representás a una empresa?</h3><p>Las empresas no verificadas pueden remitir una oferta para revisión por el Centro de Estudiantes o la Secretaría Académica.</p></div><button class="btn btn-muted" disabled title="Se implementará en una siguiente etapa">Compártenos tu oferta laboral · Próximamente</button></div>
+        <div class="secondary-panel"><div><h3>¿Representás a una empresa?</h3><p>Las empresas no verificadas pueden remitir una oferta para revisión por el Centro de Estudiantes o la Secretaría Académica.</p></div><button class="btn btn-muted" data-nav="compartir">Compártenos tu oferta laboral</button></div>
       </div>
     </section>
 
@@ -67,9 +69,9 @@
 
     <section class="screen hidden" id="screen-login" data-screen="login">
       <div class="auth-page"><div class="auth-shell"><div class="auth-intro"><span class="eyebrow dark">ACCESO A LA PLATAFORMA</span><h1>Bienvenido nuevamente</h1><p>Ingresá para acceder a las oportunidades laborales y gestionar tu perfil universitario.</p><div class="auth-decoration" aria-hidden="true">✦</div></div><div class="auth-panel">
-        <div class="auth-heading"><span class="auth-mini-logo">FCT</span><h2>Iniciar sesión</h2><p>Ingresá tu matrícula y la contraseña que creaste al registrarte. La cédula no es tu contraseña.</p></div>
+        <div class="auth-heading"><span class="auth-mini-logo">FCT</span><h2>Iniciar sesión</h2><p>Ingresá tu matrícula (estudiante) o nombre de usuario (empresa, Centro de Estudiantes o Secretaría Académica), con tu contraseña.</p></div>
         <form id="login-form" novalidate>
-          <div class="field"><label for="login-user">Matrícula del estudiante</label><input id="login-user" name="usuario" placeholder="Ej.: c06559" autocapitalize="off" spellcheck="false" autocomplete="username" required /></div>
+          <div class="field"><label for="login-user">Usuario o matrícula</label><input id="login-user" name="usuario" placeholder="Ej.: c06559" autocapitalize="off" spellcheck="false" autocomplete="username" required /></div>
           <div class="field"><label for="login-password">Contraseña</label><input id="login-password" name="password" type="password" placeholder="La que creaste al registrarte" autocomplete="current-password" required /><button type="button" class="text-button" id="toggle-login-password" aria-pressed="false" aria-controls="login-password">Mostrar contraseña</button></div>
           <div class="form-options"><label class="checkbox-label"><input id="remember" type="checkbox" /> Recordar mi sesión</label><button type="button" class="text-button" id="forgot-password">¿Olvidaste tu contraseña?</button></div>
           <div class="alert hidden" id="login-alert" role="alert"></div>
@@ -95,7 +97,36 @@
       </form></div>
     </section>
 
-    <section class="screen hidden" id="screen-perfil" data-screen="perfil"><div class="section-banner short"><div class="wrap"><span class="eyebrow">ÁREA PERSONAL</span><h1>Mi espacio</h1><p>Tu acceso a la Bolsa de Trabajo Universitaria.</p></div></div><div class="wrap content-section"><div id="profile-card" class="profile-card"><p>Cargando perfil...</p></div><div id="student-area"></div><button class="btn btn-secondary" id="logout">Cerrar sesión</button></div></section>
+    
+    <section class="screen hidden" id="screen-compartir" data-screen="compartir">
+      <div class="section-banner short"><div class="wrap"><span class="eyebrow">EMPRESAS NO VERIFICADAS</span><h1>Compártenos tu oferta laboral</h1><p>Las ofertas enviadas se revisarán antes de publicarse; si se aprueban estarán vigentes durante 14 días.</p></div></div>
+      <div class="wrap register-layout">
+        <aside class="register-help"><div class="info-card"><div class="feature-icon">✉</div><h2>Compartí una oportunidad</h2><p>No necesitás tener una cuenta. Completá la información de tu empresa y de la oferta para que el Centro de Estudiantes o la Secretaría Académica puedan revisarla.</p><p><strong>Importante:</strong> la oferta no se mostrará a estudiantes hasta que sea aprobada.</p></div></aside>
+        <form id="share-offer-form" class="register-card" novalidate>
+          <h2>Enviar oferta para revisión</h2><p class="muted">Los campos indicados son obligatorios.</p>
+          <div class="field"><label for="share-company">Razón social *</label><input id="share-company" name="razon_social" required maxlength="160" /></div>
+          <div class="field-grid">
+            <div class="field"><label for="share-contact">Persona de contacto *</label><input id="share-contact" name="persona_contacto" required /></div>
+            <div class="field"><label for="share-email">Correo de contacto *</label><input id="share-email" name="correo_contacto" type="email" required /></div>
+            <div class="field"><label for="share-phone">Teléfono</label><input id="share-phone" name="telefono_contacto" type="tel" /></div>
+            <div class="field"><label for="share-type">Tipo *</label><select id="share-type" name="tipo" required><option value="Empleo">Empleo</option><option value="Pasantía">Pasantía</option></select></div>
+          </div>
+          <div class="field"><label for="share-title">Título de la oferta *</label><input id="share-title" name="titulo" required maxlength="200" /></div>
+          <div class="field"><label for="share-description">Descripción *</label><textarea id="share-description" name="descripcion" required rows="4"></textarea></div>
+          <div class="field"><label for="share-requirements">Requisitos *</label><textarea id="share-requirements" name="requisitos" required rows="3"></textarea></div>
+          <div class="field"><label for="share-careers">Carreras relacionadas * (seleccioná una o más)</label><select id="share-careers" name="carreras" multiple required size="3"></select></div>
+          <div class="field-grid">
+            <div class="field"><label for="share-medium-type">Medio para postularse</label><select id="share-medium-type" name="medio_tipo"><option value="Correo">Correo</option><option value="Enlace">Enlace externo HTTPS</option></select></div>
+            <div class="field"><label for="share-medium-value">Correo o enlace *</label><input id="share-medium-value" name="medio_valor" placeholder="reclutamiento@empresa.com" required /></div>
+          </div>
+          <div class="field"><label for="share-file">Flyer, imagen o PDF (opcional, máximo 5 MB)</label><input id="share-file" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" /></div>
+          <div id="share-alert" class="alert hidden" role="status"></div>
+          <button class="btn btn-primary" id="share-submit" type="submit">Enviar oferta</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="screen hidden" id="screen-perfil" data-screen="perfil"><div class="section-banner short"><div class="wrap"><span class="eyebrow">ÁREA PERSONAL</span><h1>Mi espacio</h1><p>Tu acceso a la Bolsa de Trabajo Universitaria.</p></div></div><div class="wrap content-section"><div id="profile-card" class="profile-card"><p>Cargando perfil...</p></div><div id="student-area"></div><div id="portal-area"></div><button class="btn btn-secondary" id="logout">Cerrar sesión</button></div></section>
   </main>
   <dialog id="offer-modal" aria-label="Detalle de la oferta laboral"></dialog>
 
