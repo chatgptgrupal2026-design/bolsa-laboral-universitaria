@@ -63,24 +63,47 @@ $('#filter-type').addEventListener('change',renderOffers);
 $('#clear-filters').addEventListener('click',()=>{$('#filter-type').value='';renderOffers();});
 $('#forgot-password').addEventListener('click',()=>setAlert('#login-alert','La recuperación de contraseña (CU18) se implementará en una siguiente etapa.'));
 $('#logout').addEventListener('click',()=>logout());
+$('#toggle-login-password').addEventListener('click',()=>{
+ const input=$('#login-password');
+ const showing=input.type==='password';
+ input.type=showing?'text':'password';
+ const toggle=$('#toggle-login-password');
+ toggle.textContent=showing?'Ocultar contraseña':'Mostrar contraseña';
+ toggle.setAttribute('aria-pressed',String(showing));
+});
 $('#register-form').addEventListener('submit',async e=>{
  e.preventDefault();clearAlert('#register-alert');
  const form=e.currentTarget;const input=Object.fromEntries(new FormData(form));
+ input.matricula=String(input.matricula||'').trim().toLowerCase();
  if(!input.matricula||!input.cedula||!input.correo||!input.password||!input.repeat){setAlert('#register-alert','Completá todos los campos obligatorios.');return;}
  if(input.password.length<8){setAlert('#register-alert','La contraseña debe tener al menos 8 caracteres.');return;}
  if(input.password!==input.repeat){setAlert('#register-alert','Las contraseñas no coinciden.');return;}
  setBusy('#submit-register',true,'Crear cuenta →');
- try{const data=await request('register',input);form.reset();setAlert('#register-alert',data.message||'Cuenta creada correctamente.',true);}
+ try{
+  const data=await request('register',input);
+  form.reset();
+  $('#login-user').value=input.matricula;
+  $('#login-password').value='';
+  navigate('login');
+  clearAlert('#login-alert');
+  setAlert('#login-alert',(data.message||'Cuenta creada correctamente.')+' Ingresá con la contraseña que acabás de elegir.',true);
+ }
  catch(err){setAlert('#register-alert',err.message);}
  finally{setBusy('#submit-register',false,'Crear cuenta →');}
 });
 $('#login-form').addEventListener('submit',async e=>{
  e.preventDefault();clearAlert('#login-alert');
  const input=Object.fromEntries(new FormData(e.currentTarget));
+ input.usuario=String(input.usuario||'').trim().toLowerCase();
  if(!input.usuario||!input.password){setAlert('#login-alert','Ingresá tu usuario y contraseña.');return;}
  setBusy('#submit-login',true,'Ingresar →');
  try{const data=await request('login',input);if($('#remember').checked)localStorage.setItem('bolsa-token',data.token);else sessionStorage.setItem('bolsa-token',data.token);state.profile=data.profile;$('#login-password').value='';updateHeader();navigate('perfil');}
- catch(err){setAlert('#login-alert',err.message);}
+ catch(err){
+  const message=err.message==='Usuario o contraseña incorrectos.'
+   ? 'Matrícula o contraseña incorrecta. Usá la contraseña que creaste al registrarte (no la cédula).'
+   : err.message;
+  setAlert('#login-alert',message);
+ }
  finally{setBusy('#submit-login',false,'Ingresar →');}
 });
 updateHeader();navigate(location.hash.replace('#','')||'inicio');
