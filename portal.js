@@ -69,7 +69,7 @@ function render(){
 function company(){
  const c=view.company||{};
  return '<h2>Perfil de mi empresa</h2><p class="muted">El RUC fue verificado por Secretaría Académica y no puede modificarse.</p>'+
- '<form id="company-form" class="student-form">'+input('ruc','RUC',c.ruc)+input('razon_social','Razón social',c.razon_social,'text',true)+
+ '<form id="company-form" class="student-form">'+'<div class="field"><label for="portal-ruc">RUC (no editable)</label><input id="portal-ruc" name="ruc" value="'+E(c.ruc)+'" readonly /></div>'+input('razon_social','Razón social',c.razon_social,'text',true)+
  '<div class="field"><label for="portal-descripcion">Descripción</label><textarea id="portal-descripcion" name="descripcion" rows="4">'+E(c.descripcion)+'</textarea></div>'+
  '<div class="field-grid">'+input('persona_contacto','Persona de contacto',c.persona_contacto,'text',true)+input('correo_contacto','Correo de contacto',c.correo_contacto,'email',true)+input('telefono','Teléfono',c.telefono,'tel')+'</div>'+
  '<button class="btn btn-primary" type="submit">Guardar perfil</button></form>';
@@ -200,14 +200,14 @@ document.addEventListener('click',async e=>{
   catch(err){message(err.message,true);}return;
  }
  const cv=e.target.closest('[data-applicant-cv]');
- if(cv){try{const r=await request('company-applicant-cv',{application_id:Number(cv.dataset.applicantCv)},true);window.open(r.url,'_blank','noopener,noreferrer');}catch(err){message(err.message,true);}return;}
+ if(cv){const pop=window.open('about:blank','_blank');try{const r=await request('company-applicant-cv',{application_id:Number(cv.dataset.applicantCv)},true);if(pop)pop.location.href=r.url;else message('Enlace del CV (copiar y abrir): '+r.url);}catch(err){pop?.close();message(err.message,true);}return;}
  const review=e.target.closest('[data-review-detail]');
  if(review){
   try{reviewOffer=await request('reviewer-offer-detail',{offer_id:Number(review.dataset.reviewDetail)},true);render();}
   catch(err){message(err.message,true);}return;
  }
  const attachment=e.target.closest('[data-review-attachment]');
- if(attachment){try{const r=await request('reviewer-attachment',{attachment_id:Number(attachment.dataset.reviewAttachment)},true);window.open(r.url,'_blank','noopener,noreferrer');}catch(err){message(err.message,true);}return;}
+ if(attachment){const pop=window.open('about:blank','_blank');try{const r=await request('reviewer-attachment',{attachment_id:Number(attachment.dataset.reviewAttachment)},true);if(pop)pop.location.href=r.url;else message('Enlace del adjunto (copiar y abrir): '+r.url);}catch(err){pop?.close();message(err.message,true);}return;}
  const approve=e.target.closest('[data-review-approve]');
  if(approve){if(confirm('¿Confirmás la aprobación de esta oferta por 14 días?')){reviewOffer=null;await perform('reviewer-evaluate',{offer_id:Number(approve.dataset.reviewApprove),decision:'Aprobar'});}return;}
  const reject=e.target.closest('[data-review-reject]');
