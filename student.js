@@ -105,7 +105,12 @@ async function showOffer(id){
   rowHTML('Estado',o.estado)+(o.vigencia_indefinida?rowHTML('Vigencia','Indefinida'):rowHTML('Fecha de vencimiento',o.fecha_vencimiento))+
   '<h3>Descripción</h3><p class="preserve-lines">'+H(o.descripcion)+'</p><h3>Requisitos</h3><p class="preserve-lines">'+H(o.requisitos||'No especificados')+'</p>'+
   (o.verificada?(expired?'<p class="alert">Esta oferta no admite postulaciones.</p>':'<button class="btn btn-primary" data-apply="'+o.id_oferta+'">Postularme</button>'):
-  '<div class="info-card"><strong>Empresa no verificada</strong><p>Aprobada por: '+H(o.aprobada_por||'Instancia revisora')+'</p>'+o.medios.map(m=>rowHTML(H(m.tipo||'Medio de contacto'),m.valor)).join('')+'</div>')+
+  '<div class="info-card"><strong>Empresa no verificada</strong><p>Aprobada por: '+H(o.aprobada_por||'Instancia revisora')+'</p>'+o.medios.map(m=>{
+    const val=String(m.valor||'');
+    if(m.tipo==='Enlace' && /^https:\/\//i.test(val))return '<p><a href="'+H(val)+'" target="_blank" rel="noopener noreferrer">Abrir enlace externo de postulación</a></p>';
+    if(m.tipo==='Correo' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val))return '<p><a href="mailto:'+H(val)+'">Enviar correo de postulación: '+H(val)+'</a></p>';
+    return rowHTML(H(m.tipo||'Medio de contacto'),val);
+  }).join('')+'</div>')+
   '<button class="btn btn-secondary" data-close-offer>Cerrar</button></div>';
  }catch(e){modal.innerHTML='<div class="modal-body"><p class="alert">'+H(e.message)+'</p><button class="btn btn-secondary" data-close-offer>Cerrar</button></div>';}
 }
