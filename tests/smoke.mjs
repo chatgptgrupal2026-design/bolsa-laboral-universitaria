@@ -43,4 +43,16 @@ const withoutSession=await call("student-dashboard");
 assert.equal(withoutSession.status,401,JSON.stringify(withoutSession.body));
 console.log("OK: CU03 protección de perfiles sin sesión.");
 
+const companyDenied=await call("company-dashboard");
+assert.equal(companyDenied.status,401,JSON.stringify(companyDenied.body));
+const reviewerDenied=await call("reviewer-dashboard");
+assert.equal(reviewerDenied.status,401,JSON.stringify(reviewerDenied.body));
+const secretaryDenied=await call("secretary-dashboard");
+assert.equal(secretaryDenied.status,401,JSON.stringify(secretaryDenied.body));
+console.log("OK: CU10-CU24, módulos de empresa, revisión y Secretaría requieren sesión.");
+
+const invalidReset=await call("password-reset-complete",{token:"invalido",password:"pruebaSegura2026"});
+assert.equal(invalidReset.status,400,JSON.stringify(invalidReset.body));
+console.log("OK: CU18 rechaza token de recuperación inválido.");
+
 console.log("Pruebas públicas completadas. Los flujos autenticados se verifican desde la interfaz.");
