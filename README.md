@@ -21,11 +21,19 @@ python -m http.server 8080
 Abrir `http://localhost:8080`.
 
 ## Datos simulados de registro
-- Matrícula: `20260001`
-- Cédula: `9000001`
-- Carrera: Análisis de Sistemas
 
-Son datos ficticios. La matrícula se puede registrar una sola vez.
+La plataforma utiliza un **Sistema Académico simulado**, no una conexión a alumnos reales:
+
+| Matrícula de prueba | Cédula ficticia | Carrera |
+|---|---|---|
+| `c06559` | `9000002` | Análisis de Sistemas |
+| `20260001` | `9000001` | Análisis de Sistemas |
+
+Las matrículas alfanuméricas (como `c06559`) se normalizan a minúsculas.
+Para **iniciar sesión**, primero hay que registrar el estudiante (CU01), asignarle una contraseña y entrar con matrícula + contraseña (CU02).
+Cada matrícula solo se puede registrar una vez.
+
+El código fuente de la función Supabase está en `supabase/functions/bolsa-api/index.ts`. Los cambios en esa función requieren un despliegue propio en Supabase; Vercel actualiza solo el frontend.
 
 ## Publicación
 Vincular este repositorio con el proyecto **bolsa-laboral-universitaria-web-v1** de Vercel; la rama de producción debe ser `main`. Vercel detecta la aplicación como sitio estático, con `index.html` en la raíz y sin comando de build.
