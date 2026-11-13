@@ -22,16 +22,18 @@ Abrir `http://localhost:8080`.
 
 ## Datos simulados de registro
 
-La plataforma utiliza un **Sistema Académico simulado**, no una conexión a alumnos reales:
+La plataforma utiliza un **Sistema Académico simulado**, no una conexión a alumnos reales. La matrícula `c06559` tiene una cédula asociada, almacenada en el esquema privado de Supabase y nunca escrita en este repositorio público:
 
 | Matrícula de prueba | Cédula ficticia | Carrera |
 |---|---|---|
-| `c06559` | `9000002` | Análisis de Sistemas |
+| `c06559` | Guardada solo en Supabase | Análisis de Sistemas |
 | `20260001` | `9000001` | Análisis de Sistemas |
 
 Las matrículas alfanuméricas (como `c06559`) se normalizan a minúsculas.
 Para **iniciar sesión**, primero hay que registrar el estudiante (CU01), asignarle una contraseña y entrar con matrícula + contraseña (CU02).
 Cada matrícula solo se puede registrar una vez.
+
+El simulador académico usa `simulacion_academica.estudiante` en PostgreSQL y una función de consulta interna accesible solo para el backend.
 
 El código fuente de la función Supabase está en `supabase/functions/bolsa-api/index.ts`. Los cambios en esa función requieren un despliegue propio en Supabase; Vercel actualiza solo el frontend.
 
