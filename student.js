@@ -195,5 +195,5 @@ window.BolsaStudent={
  clear(){data=null;editing={};if(el())el().innerHTML='';},
  showOffer
 };
-if(getToken() && location.hash==='#perfil')window.BolsaStudent.open();
+
 })();
