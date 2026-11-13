@@ -131,8 +131,9 @@ document.addEventListener('click',async e=>{
  const offer=e.target.closest('[data-open-offer]');if(offer){await showOffer(offer.dataset.openOffer);return;}
  if(e.target.closest('[data-close-offer]')){document.getElementById('offer-modal')?.close();return;}
  const view=e.target.closest('#view-cv');if(view){
-   try{const res=await request('student-cv-view',{},true);window.open(res.url,'_blank','noopener,noreferrer');}
-   catch(error){info(error.message,'error');}
+   const pop=window.open('about:blank','_blank');
+   try{const res=await request('student-cv-view',{},true);if(pop)pop.location.href=res.url;else info('Enlace del PDF (copiar y abrir): '+res.url);}
+   catch(error){pop?.close();info(error.message,'error');}
    return;
  }
  const apply=e.target.closest('[data-apply]');if(apply){
