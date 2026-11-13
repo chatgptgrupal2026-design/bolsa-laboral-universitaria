@@ -21,5 +21,6 @@ jobs:
           node --check app.js
           node --check student.js
           node --check portal.js
+          node --check workspace.js
       - name: Probar consultas públicas y permisos
         run: node tests/smoke.mjs
