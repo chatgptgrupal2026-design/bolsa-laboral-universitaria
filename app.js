@@ -2,7 +2,7 @@
 const API = 'https://fxbhnyvlekulmuvvmrlr.supabase.co/functions/v1/bolsa-api';
 const state = {screen: 'inicio', offers: [], profile: null, token: ''};
 const $ = (selector) => document.querySelector(selector);
-const screens = new Set(['inicio', 'ofertas', 'registro', 'login', 'perfil', 'compartir']);
+const screens = new Set(['inicio', 'ofertas', 'registro', 'login', 'perfil', 'compartir', 'recuperar', 'restablecer']);
 const getToken = () => sessionStorage.getItem('bolsa-token') || localStorage.getItem('bolsa-token') || '';
 function clean(text) {return String(text ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function setAlert(id, message, success = false){const el = $(id);el.textContent = message;el.className = 'alert' + (success ? ' success' : '');}
@@ -27,7 +27,7 @@ async function request(action, extras={}, useToken=false){
 function navigate(to){
   if(!screens.has(to))to='inicio';
   // Un usuario con sesión activa no necesita ver registro ni acceso.
-  if(getToken() && (to==='registro'||to==='login'))to='perfil';
+  if(getToken() && ['registro','login','recuperar','restablecer'].includes(to))to='perfil';
   state.screen=to;
   for(const el of document.querySelectorAll('[data-screen]')) el.classList.toggle('hidden', el.dataset.screen!==to);
   for(const el of document.querySelectorAll('.nav [data-nav]')) el.classList.toggle('active',el.dataset.nav===to);
@@ -89,7 +89,7 @@ for(const btn of document.querySelectorAll('[data-nav]')) btn.addEventListener('
 $('#filter-type').addEventListener('change',renderOffers);
 $('#filter-career').addEventListener('change',renderOffers);
 $('#clear-filters').addEventListener('click',()=>{$('#filter-type').value='';$('#filter-career').value='';renderOffers();});
-$('#forgot-password').addEventListener('click',()=>setAlert('#login-alert','La recuperación de contraseña (CU18) se implementará en una siguiente etapa.'));
+$('#forgot-password').addEventListener('click',()=>navigate('recuperar'));
 $('#logout').addEventListener('click',()=>logout());
 $('#toggle-login-password').addEventListener('click',()=>{
  const input=$('#login-password');
@@ -134,4 +134,32 @@ $('#login-form').addEventListener('submit',async e=>{
  }
  finally{setBusy('#submit-login',false,'Ingresar →');}
 });
+
+$('#recover-form').addEventListener('submit',async e=>{
+ e.preventDefault();clearAlert('#recover-alert');
+ const correo=$('#recover-email').value.trim().toLowerCase();
+ const button=$('#submit-recover');
+ button.disabled=true;button.textContent='Enviando...';
+ try{const res=await request('password-reset-request',{correo});setAlert('#recover-alert',res.message,true);}
+ catch(error){setAlert('#recover-alert',error.message);}
+ finally{button.disabled=false;button.textContent='Enviar enlace';}
+});
+$('#reset-form').addEventListener('submit',async e=>{
+ e.preventDefault();clearAlert('#reset-alert');
+ const token=new URLSearchParams(location.search).get('token')||'';
+ const password=$('#reset-password').value;
+ const repeat=$('#reset-repeat').value;
+ if(!token){setAlert('#reset-alert','No se encontró un enlace de recuperación válido.');return;}
+ if(password.length<8||password!==repeat){setAlert('#reset-alert','Las contraseñas no coinciden o son demasiado cortas.');return;}
+ const button=$('#submit-reset');button.disabled=true;button.textContent='Guardando...';
+ try{
+  const res=await request('password-reset-complete',{token,password});
+  history.replaceState(null,'',location.pathname+'#login');
+  $('#login-password').value='';
+  navigate('login');
+  setAlert('#login-alert',res.message,true);
+ }catch(error){setAlert('#reset-alert',error.message);}
+ finally{button.disabled=false;button.textContent='Restablecer contraseña';}
+});
+
 updateHeader();navigate(location.hash.replace('#','')||'inicio');
