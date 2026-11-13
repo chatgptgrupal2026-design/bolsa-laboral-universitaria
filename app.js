@@ -34,7 +34,7 @@ function navigate(to){
   history.replaceState(null,'','#'+to);
   window.scrollTo({top:0,behavior:'instant'});
   if(to==='ofertas') loadOffers();
-  if(to==='perfil') loadProfile();
+  if(to==='perfil') {loadProfile();window.BolsaStudent?.open();}
 }
 function updateHeader(){
  const loggedIn=Boolean(getToken());
@@ -45,17 +45,32 @@ function updateHeader(){
  for(const btn of document.querySelectorAll('[data-nav="registro"]')) btn.classList.toggle('hidden',loggedIn);
 }
 async function loadOffers(){
- const status=$('#offers-status');const list=$('#offers-list');status.classList.remove('hidden');status.textContent='Cargando ofertas...';list.innerHTML='';
- try{const data=await request('offers');state.offers=data.items||[];renderOffers();}
- catch(err){status.textContent=err.message+' Intentá nuevamente.';}
+ const status=$('#offers-status'),list=$('#offers-list');
+ status.classList.remove('hidden');status.textContent='Cargando ofertas...';list.innerHTML='';
+ try{
+   const [offerData,careerData]=await Promise.all([request('offers'),request('careers')]);
+   state.offers=offerData.items||[];
+   const select=$('#filter-career');
+   const selected=select.value;
+   select.innerHTML='<option value="">Todas las carreras</option>'+careerData.items.map(c=>'<option value="'+c.id_carrera+'">'+clean(c.nombre)+'</option>').join('');
+   select.value=selected;
+   renderOffers();
+ }catch(err){status.textContent=err.message+' Intentá nuevamente.';}
 }
 function renderOffers(){
- const type=$('#filter-type').value;
- const results=state.offers.filter(o=>!type||o.tipo===type);
+ const type=$('#filter-type').value,career=$('#filter-career').value;
+ const results=state.offers.filter(o=>(!type||o.tipo===type)&&(!career||(o.carreras||[]).some(c=>String(c.id_carrera)===career)));
  const status=$('#offers-status'),list=$('#offers-list');
- if(!results.length){status.classList.remove('hidden');status.textContent=state.offers.length?'No se encontraron ofertas con los filtros seleccionados.':'Todavía no hay ofertas publicadas. Volvé a consultar más adelante.';list.innerHTML='';return;}
+ if(!results.length){
+  status.classList.remove('hidden');
+  status.textContent=state.offers.length?'No se encontraron ofertas con los filtros seleccionados.':'Todavía no hay ofertas publicadas. Volvé a consultar más adelante.';
+  list.innerHTML='';return;
+ }
  status.classList.add('hidden');
- list.innerHTML=results.map(o=>{const expired=o.estado==='Vencida'||(o.fecha_vencimiento&&!o.vigencia_indefinida&&new Date(o.fecha_vencimiento+'T23:59:59')<new Date());return `<article class="offer"><div class="offer-meta"><span class="pill">${clean(o.tipo)}</span>${expired?'<span class="pill expired">Vencida</span>':''}</div><h3>${clean(o.titulo)}</h3><p>${clean(o.descripcion).slice(0,260)}</p><p><strong>Publicada:</strong> ${o.fecha_publicacion?new Date(o.fecha_publicacion).toLocaleDateString('es-PY'):'—'} · <strong>Vigencia:</strong> ${o.vigencia_indefinida?'Indefinida':clean(o.fecha_vencimiento||'Sin definir')}</p><p>${expired?'Esta oferta ya no admite postulaciones.':'Consultá el detalle al iniciar sesión. El módulo de postulaciones está en desarrollo.'}</p></article>`}).join('');
+ list.innerHTML=results.map(o=>{
+ const expired=o.estado==='Vencida'||(o.fecha_vencimiento&&!o.vigencia_indefinida&&new Date(o.fecha_vencimiento+'T23:59:59')<new Date());
+ return `<article class="offer"><div class="offer-meta"><span class="pill">${clean(o.tipo)}</span>${expired?'<span class="pill expired">Vencida</span>':''}</div><h3>${clean(o.titulo)}</h3><p>${clean(o.descripcion).slice(0,240)}</p><p><strong>Carrera(s):</strong> ${(o.carreras||[]).map(c=>clean(c.nombre)).join(', ')||'Todas'}</p><p><strong>Vigencia:</strong> ${o.vigencia_indefinida?'Indefinida':clean(o.fecha_vencimiento||'Sin definir')}</p><button class="btn btn-secondary" type="button" data-open-offer="${o.id_oferta}">Ver detalle</button></article>`;
+ }).join('');
 }
 async function loadProfile(){
  const card=$('#profile-card');
@@ -66,10 +81,11 @@ async function loadProfile(){
  card.innerHTML=`<span class="eyebrow dark">CU02 · SESIÓN ACTIVA</span><h2>¡Bienvenido${student?', '+clean(student.nombre):''}!</h2><p>Accediste correctamente como <strong>${clean(perfil.tipo)}</strong>.</p><p><strong>Usuario:</strong> ${clean(perfil.usuario)}</p>${student?`<p><strong>Nombre:</strong> ${clean(student.nombre)} ${clean(student.apellido)}</p><p><strong>Matrícula:</strong> ${clean(student.matricula)}</p>`:''}<div class="status-message">Módulos de perfil académico, CV y postulaciones: próximos casos de uso.</div>`;
  }catch(err){card.textContent=err.message; if(/sesión|cuenta/i.test(err.message)){logout(false);navigate('login');}}
 }
-function logout(navigateAway=true){localStorage.removeItem('bolsa-token');sessionStorage.removeItem('bolsa-token');state.token='';state.profile=null;updateHeader();if(navigateAway) navigate('inicio');}
+function logout(navigateAway=true){localStorage.removeItem('bolsa-token');sessionStorage.removeItem('bolsa-token');state.token='';state.profile=null;window.BolsaStudent?.clear();updateHeader();if(navigateAway) navigate('inicio');}
 for(const btn of document.querySelectorAll('[data-nav]')) btn.addEventListener('click',e=>{e.preventDefault();navigate(btn.dataset.nav);});
 $('#filter-type').addEventListener('change',renderOffers);
-$('#clear-filters').addEventListener('click',()=>{$('#filter-type').value='';renderOffers();});
+$('#filter-career').addEventListener('change',renderOffers);
+$('#clear-filters').addEventListener('click',()=>{$('#filter-type').value='';$('#filter-career').value='';renderOffers();});
 $('#forgot-password').addEventListener('click',()=>setAlert('#login-alert','La recuperación de contraseña (CU18) se implementará en una siguiente etapa.'));
 $('#logout').addEventListener('click',()=>logout());
 $('#toggle-login-password').addEventListener('click',()=>{
