@@ -8,20 +8,8 @@ const cors = {
   "cache-control": "no-store"
 };
 // Registro académico simulado: todos los datos son ficticios.
-const fakeAcademic = {
-  "20260001": {
-    cedula: "9000001",
-    nombre: "Estudiante",
-    apellido: "Demostración",
-    carrera: "Análisis de Sistemas"
-  },
-  "c06559": {
-    cedula: "9000002",
-    nombre: "Estudiante",
-    apellido: "De Prueba",
-    carrera: "Análisis de Sistemas"
-  }
-};
+// La validación del estudiante se realiza mediante el simulador
+// académico privado en PostgreSQL, sin exponer cédulas en el código.
 const studentMatriculaPattern = /^(?:[a-z][0-9]{5,7}|[0-9]{5,15})$/;
 const normalizeMatricula = (value) => String(value ?? "").trim().toLowerCase();
 const textEncoder = new TextEncoder();
@@ -123,8 +111,14 @@ Deno.serve(async req => {
   if(!studentMatriculaPattern.test(matricula)) return fail("Formato de matrícula inválido. Ejemplo: c06559.");
   if(!/^[0-9]{5,12}$/.test(cedula)||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)||password.length<8||password.length>72||password!==repeat)
    return fail("Revisá matrícula, cédula, correo y contraseña (mínimo 8 caracteres).");
-  const academic=fakeAcademic[matricula];
-  if(!academic || academic.cedula!==cedula) return fail("La matrícula y la cédula no coinciden con el registro académico simulado.");
+  const academicRows = await db(
+    "rpc/consultar_estudiante_academico_simulado",
+    {},
+    { p_matricula: matricula, p_cedula: cedula },
+    "POST"
+  );
+  const academic=academicRows[0];
+  if(!academic) return fail("La matrícula y la cédula no coinciden con el registro académico simulado.");
   const dup=await db("usuario",{select:"id_usuario",or:"(nombre_usuario.eq."+matricula+",correo.eq."+correo+")",limit:1});
   if(dup.length) return fail("Ya existe una cuenta registrada con esa matrícula o correo.",409);
   const carreras=await db("carrera",{select:"id_carrera",nombre:"eq."+academic.carrera,limit:1});
