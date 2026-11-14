@@ -4,32 +4,34 @@ Este seguimiento corresponde a los **24 casos de uso del TPF04** y al DER del TP
 
 **Leyenda:** Código publicado = frontend y backend desplegados, pero no necesariamente probados de principio a fin. Operativo comprobado = se verificó la operación o su programación.
 
-| Caso | Función | Estado |
+**Última auditoría (14/11/2026):** [Informe completo CU01–CU24](./AUDITORIA_FUNCIONAL_2026-11-14.md). Resultado: **27/27 pruebas E2E de estudiante** aprobadas y comprobaciones de integridad de los flujos administrativos. Los casos de uso por rol que no se probaron con sesión real siguen pendientes.
+
+| Caso | Función | Estado verificado |
 |---|---|---|
-| CU01 | Registro de estudiante con matrícula y cédula simuladas | Operativo comprobado |
-| CU02 | Inicio de sesión por matrícula/usuario según rol | Operativo para estudiante; otros roles con cuentas demo, pendiente prueba |
-| CU03 | Editar perfil académico | Código publicado; pendiente prueba |
-| CU04 | Editar perfil profesional, experiencias, idiomas y capacitaciones | Código publicado; pendiente prueba |
-| CU05 | Subir, reemplazar y ver CV PDF (máximo 5 MB) | Código publicado, bucket privado; pendiente prueba con PDF |
-| CU06 | Consultar ofertas y filtrar por tipo y carrera | Código publicado, oferta DEMO cargada; pendiente prueba |
-| CU07 | Ver detalle; empresa verificada o externa con medio de postulación | Código publicado; pendiente prueba |
-| CU08 | Postularse a oferta de empresa verificada con CV; una vez por oferta | Código publicado; pendiente prueba |
-| CU09 | Consultar historial de postulaciones | Código publicado; pendiente prueba |
-| CU10 | Empresa verificada publica ofertas | Código publicado; pendiente prueba |
-| CU11 | Empresa verificada modifica sus ofertas | Código publicado; pendiente prueba |
-| CU12 | Empresa verificada da de baja ofertas y cierra postulaciones | Código publicado; pendiente prueba |
-| CU13 | Empresa ve postulantes y CV privado | Código publicado; pendiente prueba |
-| CU14 | Envío de oferta externa con adjunto opcional | Acceso restringido a Empresa verificada o Secretaría Académica; pendiente prueba con sesión |
-| CU15 | Revisores consultan ofertas pendientes, detalle y adjuntos | Código publicado; pendiente prueba |
-| CU16 | Revisor aprueba (14 días) o rechaza con motivo | Código publicado; correo requiere configuración |
-| CU17 | Vencimiento automático y cierre de postulaciones | Programado en pg_cron, ejecución de comprobación correcta |
-| CU18 | Solicitar enlace de recuperación, restablecer con token de un solo uso | Código publicado; requiere proveedor de correo real |
-| CU19 | Cambio de contraseña desde sesión | Código publicado; pendiente prueba |
-| CU20 | Retiro de postulación sin posibilidad de volver a postularse | Código publicado; pendiente prueba |
-| CU21 | Secretaría gestiona empresas verificadas | Código publicado; correo de credenciales requiere configuración |
-| CU22 | Secretaría gestiona revisores | Código publicado; correo de credenciales requiere configuración |
-| CU23 | Revisor edita o da de baja ofertas externas aprobadas | Código publicado; pendiente prueba |
-| CU24 | Empresa verificada actualiza su perfil | Código publicado; pendiente prueba |
+| CU01 | Registro de estudiante | E2E OK |
+| CU02 | Inicio de sesión | E2E estudiante OK; otros roles pendientes |
+| CU03 | Perfil académico | E2E OK; guardado atómico |
+| CU04 | Perfil profesional y subregistros | E2E OK |
+| CU05 | CV PDF privado | E2E OK: subir, leer, reemplazar y eliminar |
+| CU06 | Consultar y filtrar ofertas | API y datos OK; UI de filtros sin prueba de navegador |
+| CU07 | Detalle de oferta | E2E empresa verificada OK; externa pendiente |
+| CU08 | Postularse a oferta con CV y sin duplicados | E2E OK |
+| CU09 | Historial de postulaciones | E2E OK |
+| CU10 | Publicar ofertas empresa verificada | SQL OK; E2E de empresa pendiente |
+| CU11 | Editar ofertas de empresa | SQL OK; E2E de empresa pendiente |
+| CU12 | Dar de baja ofertas y cerrar postulaciones | SQL OK; E2E de empresa pendiente |
+| CU13 | Consultar postulantes y CV | SQL OK; E2E de empresa pendiente |
+| CU14 | Compartir oferta externa con adjunto | SQL OK; acceso anónimo bloqueado; E2E autorizado pendiente |
+| CU15 | Revisar ofertas pendientes | SQL OK; E2E de revisor pendiente |
+| CU16 | Evaluar oferta, registrar decisión y vigencia de 14 días | SQL OK, guardado atómico; correo pendiente |
+| CU17 | Vencimiento y cierre automáticos | SQL OK y tarea pg_cron activa |
+| CU18 | Recuperar contraseña | Rechazo de token inválido OK; envío de correo HTTP 503 |
+| CU19 | Cambiar contraseña | E2E OK |
+| CU20 | Retirar postulación y bloquear repetición | E2E OK |
+| CU21 | Gestionar empresas verificadas | SQL OK; credenciales por correo pendientes |
+| CU22 | Gestionar revisores | SQL OK; credenciales por correo pendientes |
+| CU23 | Gestionar oferta externa aprobada | SQL OK; E2E de revisor pendiente |
+| CU24 | Actualizar perfil de empresa | SQL OK; E2E de empresa pendiente |
 
 ## Restricción de acceso a «Compartir oferta»
 
