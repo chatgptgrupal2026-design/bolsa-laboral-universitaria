@@ -123,7 +123,7 @@ function collection(type,title,items,key,fields){
 function curriculum(){
  const cv=data.cv;
  return '<section class="dashboard-detail-card"><div class="dashboard-card-heading"><div><span class="dashboard-card-kicker">CURRÍCULUM VITAE</span><h2>Tu documento profesional</h2><p>Podés subir o reemplazar tu CV en formato PDF (máximo 5 MB).</p></div></div>'+
- (cv?'<div class="compact-item"><div><strong>'+H(cv.nombre_archivo)+'</strong><small>Subido: '+new Date(cv.fecha_carga).toLocaleDateString('es-PY')+' · '+(cv.tamano_bytes/1024).toFixed(0)+' KB</small></div><button class="btn btn-secondary" id="view-cv">Ver PDF</button></div>':'<div class="status-message">Todavía no cargaste tu currículum.</div>')+
+ (cv?'<div class="compact-item"><div><strong>'+H(cv.nombre_archivo)+'</strong><small>Subido: '+new Date(cv.fecha_carga).toLocaleDateString('es-PY')+' · '+(cv.tamano_bytes/1024).toFixed(0)+' KB</small></div><div class="compact-actions"><button class="btn btn-secondary" type="button" id="view-cv">Ver PDF</button><button class="text-button danger" type="button" id="remove-cv">Eliminar</button></div></div>':'<div class="status-message">Todavía no cargaste tu currículum.</div>')+
  '<form id="cv-form" class="student-form"><div class="field"><label for="cv-file">Seleccionar PDF</label><input id="cv-file" type="file" accept="application/pdf,.pdf" required /></div><button type="submit" class="btn btn-primary">'+(cv?'Reemplazar':'Cargar')+' currículum</button></form></section>';
 }
 function security(){
@@ -193,6 +193,12 @@ document.addEventListener('click',async e=>{
    try{const res=await request('student-cv-view',{},true);if(pop)pop.location.href=res.url;else info('Enlace del PDF (copiar y abrir): '+res.url);}
    catch(error){pop?.close();info(error.message,'error');}
    return;
+ }
+ const remove=e.target.closest('#remove-cv');if(remove){
+  if(confirm('¿Querés eliminar tu currículum? No se puede deshacer.')){
+   await perform('student-cv-remove',{},'Currículum eliminado.');
+  }
+  return;
  }
  const apply=e.target.closest('[data-apply]');if(apply){
    if(confirm('¿Confirmás tu postulación a esta oferta?')){
