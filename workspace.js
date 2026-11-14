@@ -37,6 +37,7 @@ function shell({items,active,person,identifier,role,title,description,contentId,
    '<div class="dashboard-side-footer"><div class="dashboard-side-role">'+esc(role||'Bolsa Laboral')+'</div>'+
    '<button type="button" data-dashboard-logout class="dashboard-nav-item dashboard-logout">'+icon('salir')+'<span>Cerrar sesión</span></button></div>'+
   '</aside>'+
+  '<button type="button" class="dashboard-scrim" data-dashboard-scrim aria-label="Cerrar menú lateral" tabindex="-1"></button>'+
   '<section class="dashboard-main" aria-label="'+esc(heading)+'">'+
    '<div class="dashboard-main-top"><button type="button" data-dashboard-menu aria-expanded="false" aria-controls="dashboard-sidebar" class="dashboard-mobile-toggle">'+icon('menu')+'<span>Menú</span></button>'+
     '<div class="dashboard-breadcrumb">Mi espacio <span class="dashboard-crumb-divider">/</span> <strong>'+esc(selected.label)+'</strong></div>'+
@@ -47,16 +48,19 @@ function shell({items,active,person,identifier,role,title,description,contentId,
   '</section>'+
  '</div>';
 }
+function closeDashboardMenu(){
+ document.getElementById('dashboard-sidebar')?.classList.remove('is-open');
+ document.querySelector('[data-dashboard-menu]')?.setAttribute('aria-expanded','false');
+}
 document.addEventListener('click',e=>{
+ if(e.target.closest('[data-dashboard-scrim]')){closeDashboardMenu();return;}
  const toggle=e.target.closest('[data-dashboard-menu]');
  if(toggle){const aside=document.getElementById('dashboard-sidebar');if(!aside)return;const open=aside.classList.toggle('is-open');toggle.setAttribute('aria-expanded',String(open));return;}
  const route=e.target.closest('[data-workspace-route]');
  if(route){navigate('perfil/'+route.dataset.workspaceRoute);return;}
  if(e.target.closest('[data-dashboard-logout]')){document.getElementById('logout')?.click();return;}
- if(!e.target.closest('.dashboard-sidebar')&&!e.target.closest('[data-workspace-route]')){
-  document.getElementById('dashboard-sidebar')?.classList.remove('is-open');
-  document.querySelector('[data-dashboard-menu]')?.setAttribute('aria-expanded','false');
- }
+ if(!e.target.closest('.dashboard-sidebar')&&!e.target.closest('[data-workspace-route]'))closeDashboardMenu();
 });
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDashboardMenu();});
 window.BolsaWorkspace={shell,icon};
 })();
