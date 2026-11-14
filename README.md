@@ -3,10 +3,10 @@
 Proyecto académico de **Ingeniería del Software 2 — Facultad de Ciencias y Tecnología**.
 
 ## Estado actual
-Primera versión web: Inicio, consulta de ofertas laborales y pasantías, registro académico simulado (CU01), inicio de sesión (CU02), y área personal básica. Los demás casos de uso del TPF04/TPF05 están pendientes.
+Aplicación web con inicio, consulta y filtrado de ofertas, registro e inicio de sesión y paneles por rol (estudiante, empresa, revisores y Secretaría Académica). Los 24 casos de uso están documentados en [REQUERIMIENTOS.md](./REQUERIMIENTOS.md), con indicación explícita de cuáles requieren pruebas o configuración adicional.
 
 ## Arquitectura
-- **Frontend:** HTML, CSS y JavaScript, sitio estático para Vercel (sin build).
+- **Frontend:** HTML, CSS y JavaScript, sitio estático para Vercel (sin build). Diseño índigo tecnológico con navegación responsive.
 - **Backend:** Supabase Edge Function `bolsa-api`.
 - **Base de datos:** PostgreSQL alojado en Supabase, con 18 tablas del DER.
 - **API:** `https://fxbhnyvlekulmuvvmrlr.supabase.co/functions/v1/bolsa-api`.
@@ -42,8 +42,23 @@ Vincular este repositorio con el proyecto **bolsa-laboral-universitaria-web-v1**
 
 > No subir claves privadas ni contraseñas al repositorio. La dirección de la función de Supabase es pública; las credenciales de la base de datos viven únicamente en el backend.
 
-## Alcance pendiente
-CU03-CU05 perfiles y CV; CU08-CU09 y CU20 postulaciones; CU10-CU14 y CU21/CU24 empresas; CU15-CU17 y CU22-CU23 revisión; CU18-CU19 contraseñas. Implementar conforme a los documentos de la facultad.
+## Identidad visual y responsive
+
+Tema elegido: **Opción 1 — Índigo tecnológico**, con índigo profundo `#27235B`, violeta `#6D28D9`, lavanda `#A78BFA` y fondos `#F5F5FF`.
+
+- `styles.css`: estilos funcionales originales.
+- `theme-indigo.css`: nueva capa visual global, cargada después de `styles.css`.
+- `app.js`: navegación superior adaptable y rutas de la aplicación.
+- `workspace.js`: menú lateral compartido por estudiante, empresa y Secretaría.
+- `student.js`, `portal.js`: vistas y formularios según el rol.
+
+El tema tiene reglas adaptativas para tamaños de 1180, 920, 800, 700, 520 y 360 píxeles; respeta las preferencias de movimiento reducido y usa menús desplegables accesibles. No se cambió el esquema de datos.
+
+### Verificaciones
+
+Los controles básicos de presentación están en `tests/front-design.mjs`. Se ejecutan desde `.github/workflows/pruebas.yml` junto a la validación de sintaxis JavaScript y las pruebas de consulta al backend.
+
+**Pendientes:** pruebas manuales en navegador real, especialmente a 320–390 px de ancho y con sesión iniciada en cada rol. Consultar el estado de cada caso de uso en `REQUERIMIENTOS.md`.
 
 ## Publicación automática verificada
 
