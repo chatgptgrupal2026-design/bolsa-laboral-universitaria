@@ -16,15 +16,32 @@ function message(text,error=false){
 }
 async function ensureCareers(){
  if(careers.length)return careers;
- try{const r=await request('careers');careers=r.items;}catch{}
+ const r=await request('careers');
+ if(!Array.isArray(r.items)||!r.items.length)throw new Error('No hay carreras disponibles. Consultá con Secretaría Académica.');
+ careers=r.items;
  return careers;
+}
+function careerCheckboxes(items,chosen=[]){
+ const selected=new Set(chosen.map(String));
+ return items.map(c=>
+  '<label class="career-option"><input type="checkbox" value="'+E(c.id_carrera)+'" '+(selected.has(String(c.id_carrera))?'checked':'')+' /><span class="career-check-mark" aria-hidden="true">✓</span><span>'+E(c.nombre)+'</span></label>'
+ ).join('');
+}
+function chosenCareers(container){
+ return [...document.querySelectorAll('#'+container+' input[type="checkbox"]:checked')]
+  .map(input=>Number(input.value)).filter(Number.isSafeInteger);
 }
 async function populateShareCareers(){
  if(!canShareOffer())return;
- await ensureCareers();
- const sel=document.getElementById('share-careers');if(!sel)return;
- const values=[...sel.selectedOptions].map(x=>x.value);
- sel.innerHTML=careers.map(c=>option(c.id_carrera,c.nombre,values.includes(String(c.id_carrera)))).join('');
+ const container=document.getElementById('share-career-options');
+ if(!container)return;
+ const alreadyChosen=chosenCareers('share-careers');
+ try{
+  await ensureCareers();
+  container.innerHTML=careerCheckboxes(careers,alreadyChosen);
+ }catch(err){
+  container.innerHTML='<p class="alert">'+E(err.message)+'</p>';
+ }
 }
 async function load(){
  if(!root()||!getToken())return;
@@ -137,7 +154,9 @@ function company(){
  '<button class="btn btn-primary" type="submit">Guardar perfil</button></form>';
 }
 function careersPicker(chosen=[]){
- return '<div class="field"><label for="portal-carreras">Carreras relacionadas *</label><select id="portal-carreras" name="carreras" multiple size="4" required>'+careers.map(c=>option(c.id_carrera,c.nombre,chosen.includes(c.id_carrera))).join('')+'</select><small class="muted">Podés seleccionar varias carreras manteniendo pulsado Ctrl.</small></div>';
+ return '<fieldset class="field career-choice" id="portal-carreras"><legend>Carreras relacionadas <span aria-hidden="true">*</span></legend>'+
+ '<div class="career-options">'+careerCheckboxes(careers,chosen)+'</div>'+
+ '<small>Marcá al menos una carrera. Podés elegir varias.</small></fieldset>';
 }
 function offerForm(o={}){
  const edit=Boolean(o.id_oferta);
@@ -304,21 +323,38 @@ document.addEventListener('submit',async e=>{
    return;
   }
   try{
+   if(!f.checkValidity()){
+     f.reportValidity();
+     throw new Error('Completá los campos obligatorios del formulario.');
+   }
    const payload=Object.fromEntries(new FormData(f));
-   payload.carreras=[...document.getElementById('share-careers').selectedOptions].map(x=>Number(x.value));
-   if(!payload.carreras.length)throw new Error('Seleccioná una carrera.');
+   payload.carreras=chosenCareers('share-careers');
+   if(!payload.carreras.length){
+     document.getElementById('share-careers')?.classList.add('is-invalid');
+     document.getElementById('share-careers')?.scrollIntoView({behavior:'smooth',block:'center'});
+     throw new Error('Seleccioná al menos una carrera marcando su casilla.');
+   }
+   document.getElementById('share-careers')?.classList.remove('is-invalid');
    Object.assign(payload,await readFile(document.getElementById('share-file').files?.[0]));
-   const result=await request('public-offer-submit',payload,true);
-   f.reset();
-   alert.textContent=result.message;alert.className='alert success';
+   const sendButton=document.getElementById('share-submit');
+   sendButton.disabled=true;sendButton.textContent='Enviando oferta...';
+   try{
+    const result=await request('public-offer-submit',payload,true);
+    f.reset();
+    alert.textContent=result.message;alert.className='alert success';
+   }finally{
+    sendButton.disabled=false;sendButton.textContent='Enviar oferta';
+   }
   }catch(err){alert.textContent=err.message;alert.className='alert';}
+  alert.scrollIntoView({behavior:'smooth',block:'nearest'});
   return;
  }
  if(f.id==='company-form'){
   e.preventDefault();const d=Object.fromEntries(new FormData(f));delete d.ruc;await perform('company-profile-save',d);
  }else if(f.id==='company-offer-form'){
   e.preventDefault();
-  const d=Object.fromEntries(new FormData(f));d.carreras=[...document.getElementById('portal-carreras').selectedOptions].map(o=>Number(o.value));
+  const d=Object.fromEntries(new FormData(f));d.carreras=chosenCareers('portal-carreras');
+  if(!d.carreras.length){message('Seleccioná al menos una carrera para publicar la oferta.',true);return;}
   d.vigencia_indefinida=document.getElementById('portal-indefinida').checked;
   d.offer_id=editingOffer?.id_oferta||null;
   await perform('company-offer-save',d);
@@ -326,7 +362,8 @@ document.addEventListener('submit',async e=>{
   e.preventDefault();
   const d=Object.fromEntries(new FormData(f));
   d.offer_id=reviewOffer?.offer.id_oferta;
-  d.carreras=[...document.getElementById('portal-carreras').selectedOptions].map(o=>Number(o.value));
+  d.carreras=chosenCareers('portal-carreras');
+  if(!d.carreras.length){message('Seleccioná al menos una carrera.',true);return;}
   await perform('reviewer-approved-save',d);
  }else if(f.id==='portal-admin-form'){
   e.preventDefault();
