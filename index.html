@@ -22,7 +22,7 @@
       <nav class="nav" aria-label="Navegación principal">
         <button type="button" data-nav="inicio" class="nav-link active">Inicio</button>
         <button type="button" data-nav="ofertas" class="nav-link">Ofertas laborales</button>
-        <button type="button" data-nav="compartir" class="nav-link">Compartir oferta</button>
+        <button type="button" data-nav="compartir" class="nav-link hidden">Compartir oferta</button>
         <button type="button" data-nav="registro" class="nav-link">Registrarse</button>
         <button type="button" data-nav="login" class="nav-link nav-login" id="nav-session">Iniciar sesión</button>
       </nav>
@@ -55,7 +55,7 @@
           <article class="feature"><div class="feature-icon">◇</div><h3>Construí tu perfil</h3><p>Registrá tus datos académicos y profesionales y prepará tu CV.</p></article>
           <article class="feature"><div class="feature-icon">↗</div><h3>Postulate</h3><p>Accedé a ofertas de empresas verificadas mediante la plataforma.</p></article>
         </div>
-        <div class="secondary-panel"><div><h3>¿Representás a una empresa?</h3><p>Las empresas no verificadas pueden remitir una oferta para revisión por el Centro de Estudiantes o la Secretaría Académica.</p></div><button class="btn btn-muted" data-nav="compartir">Compártenos tu oferta laboral</button></div>
+        <div class="secondary-panel hidden" id="company-share-panel"><div><h3>¿Representás a una empresa?</h3><p>Los usuarios con permisos pueden remitir una oferta laboral para revisión. También podés administrar tus publicaciones desde el panel de empresa.</p></div><button class="btn btn-muted" data-nav="compartir">Compartir una oferta</button></div>
       </div>
     </section>
 
@@ -127,9 +127,9 @@
 
     
     <section class="screen hidden" id="screen-compartir" data-screen="compartir">
-      <div class="section-banner short"><div class="wrap"><span class="eyebrow">EMPRESAS NO VERIFICADAS</span><h1>Compártenos tu oferta laboral</h1><p>Las ofertas enviadas se revisarán antes de publicarse; si se aprueban estarán vigentes durante 14 días.</p></div></div>
+      <div class="section-banner short"><div class="wrap"><span class="eyebrow">ACCESO RESTRINGIDO</span><h1>Compartir oferta laboral</h1><p>Las ofertas enviadas se revisarán antes de publicarse; si se aprueban estarán vigentes durante 14 días.</p></div></div>
       <div class="wrap register-layout">
-        <aside class="register-help"><div class="info-card"><div class="feature-icon">✉</div><h2>Compartí una oportunidad</h2><p>No necesitás tener una cuenta. Completá la información de tu empresa y de la oferta para que el Centro de Estudiantes o la Secretaría Académica puedan revisarla.</p><p><strong>Importante:</strong> la oferta no se mostrará a estudiantes hasta que sea aprobada.</p></div></aside>
+        <aside class="register-help"><div class="info-card"><div class="feature-icon">✉</div><h2>Compartí una oportunidad</h2><p>Esta sección está disponible únicamente para usuarios autorizados. Completá la información de la empresa y la oferta para su revisión.</p><p><strong>Importante:</strong> la oferta no se mostrará a estudiantes hasta que sea aprobada.</p></div></aside>
         <form id="share-offer-form" class="register-card" novalidate>
           <h2>Enviar oferta para revisión</h2><p class="muted">Los campos indicados son obligatorios.</p>
           <div class="field"><label for="share-company">Razón social *</label><input id="share-company" name="razon_social" required maxlength="160" /></div>
