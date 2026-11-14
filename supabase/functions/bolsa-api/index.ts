@@ -471,12 +471,12 @@ Deno.serve(async req => {
   if(!id||!["Aprobar","Rechazar"].includes(decision)||(decision==="Rechazar"&&!reason))return fail("Faltan datos de evaluación.");
   const offers=await db("oferta_laboral",{select:"id_oferta",id_oferta:"eq."+id,estado:"eq.Pendiente de aprobación",id_remitente:"not.is.null",limit:1});
   if(!offers.length)return fail("Esta oferta ya fue evaluada.",409);
-  const now=new Date(),expire=new Date(pyDate()+"T12:00:00Z");
-  expire.setUTCDate(expire.getUTCDate()+14);
-  const update=decision==="Aprobar"?{estado:"Publicada",fecha_publicacion:now.toISOString(),fecha_vencimiento:expire.toISOString().slice(0,10),vigencia_indefinida:false}:{estado:"Rechazada"};
-  const done=await db("oferta_laboral",{id_oferta:"eq."+id,estado:"eq.Pendiente de aprobación"},update,"PATCH");
+  // CU16: operación transaccional para guardar decisión, vencimiento y revisión juntos.
+  const done=await db("rpc/evaluar_oferta_pendiente",{},{
+   p_id_oferta:id,p_id_revisor:actor.reviewer.id_revisor,
+   p_decision:decision,p_motivo:decision==="Rechazar"?reason:null
+  },"POST");
   if(!done.length)return fail("Esta oferta ya fue evaluada.",409);
-  await db("revision_oferta",{},[{id_oferta:id,id_revisor:actor.reviewer.id_revisor,decision:decision==="Aprobar"?"Aprobada":"Rechazada",motivo_rechazo:decision==="Rechazar"?reason:null}],"POST");
   if(decision==="Rechazar"){
    const offerDetail=await db("oferta_laboral",{select:"id_remitente",id_oferta:"eq."+id,limit:1});
    const receiver=offerDetail[0]?await db("empresa_remitente",{select:"correo_contacto",id_remitente:"eq."+offerDetail[0].id_remitente,limit:1}):[];
@@ -541,9 +541,13 @@ Deno.serve(async req => {
   if(!careers.length)return fail("La carrera no existe.");
   const others=await db("usuario",{select:"id_usuario",correo:"eq."+correo,limit:1});
   if(others.length&&others[0].id_usuario!==auth.user.id_usuario)return fail("El correo ya está registrado.",409);
-  // La matrícula, cédula, nombres y apellidos nunca se modifican aquí.
-  await db("estudiante",{id_estudiante:"eq."+auth.student.id_estudiante},{telefono:telefono||null,fecha_nacimiento:fecha||null,semestre_actual:semestre,id_carrera:carrera},"PATCH");
-  await db("usuario",{id_usuario:"eq."+auth.user.id_usuario},{correo},"PATCH");
+  // CU03: actualización atómica; ningún dato cambia si falla otro.
+  const saved=await db("rpc/guardar_perfil_academico",{},{
+   p_id_usuario:auth.user.id_usuario,p_id_estudiante:auth.student.id_estudiante,
+   p_correo:correo,p_telefono:telefono||null,p_fecha_nacimiento:fecha||null,
+   p_semestre:semestre,p_id_carrera:carrera
+  },"POST");
+  if(!saved.length)return fail("No se pudo actualizar el perfil académico.",409);
   return response({ok:true,message:"Perfil académico actualizado."});
  }
  if(action==="student-professional-save"){
