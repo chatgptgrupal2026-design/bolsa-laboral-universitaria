@@ -1,5 +1,5 @@
 // Auditoría funcional E2E — CU01 a CU09, CU18 a CU20.
-// Solo usa cuentas ficticias de prueba a990101 / a990102 registradas en el
+// Solo usa cuentas ficticias de prueba a990103 / a990104 registradas en el
 // simulador académico. NO usa credenciales reales ni claves administrativas.
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
@@ -8,7 +8,7 @@ const API='https://fxbhnyvlekulmuvvmrlr.supabase.co/functions/v1/bolsa-api';
 const pass1='QA-'+randomBytes(20).toString('base64url');
 const pass2='QA-'+randomBytes(20).toString('base64url');
 const newPass='QB-'+randomBytes(20).toString('base64url');
-const prefix='auditoria-20261114-017f96';
+const prefix='auditoria-20261114-017f96b';
 const email1=prefix+'-uno@example.invalid';
 const email2=prefix+'-dos@example.invalid';
 const report=[];
@@ -41,8 +41,8 @@ async function check(id,label,task){
 function requireToken(token){
  assert.ok(token && token.split('.').length===2,'No hay una sesión válida para continuar.');
 }
-const first={matricula:'a990101',cedula:'9900101',correo:email1,password:pass1,repeat:pass1};
-const second={matricula:'a990102',cedula:'9900102',correo:email2,password:pass2,repeat:pass2};
+const first={matricula:'a990103',cedula:'9900103',correo:email1,password:pass1,repeat:pass1};
+const second={matricula:'a990104',cedula:'9900104',correo:email2,password:pass2,repeat:pass2};
 const bytes=Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n');
 
 await check('CU01','Rechazar matrícula con cédula incorrecta',async()=>{
