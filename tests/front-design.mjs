@@ -31,3 +31,19 @@ assert.match(app,/const canShareOffer =/);
 assert.match(workspace,/data-dashboard-scrim/);
 assert.match(workspace,/data-workspace-route/);
 console.log('OK: navegación móvil, menú lateral y control visual por rol.');
+
+const portal=readFileSync(new URL('../portal.js',import.meta.url),'utf8');
+const brand=readFileSync(new URL('../assets/uc-logo.svg',import.meta.url),'utf8');
+assert.match(html,/id="share-career-options"/);
+assert.doesNotMatch(html,/<select id="share-careers"/);
+assert.match(portal,/function careerCheckboxes\(/);
+assert.match(portal,/chosenCareers\('share-careers'\)/);
+assert.match(portal,/chosenCareers\('portal-carreras'\)/);
+assert.match(portal,/request\('public-offer-submit',payload,true\)/);
+assert.match(html,/src="\.\/assets\/uc-logo\.svg"/);
+assert.match(html,/rel="icon" type="image\/svg\+xml" href="\.\/assets\/uc-logo\.svg"/);
+assert.match(workspace,/src="\.\/assets\/uc-logo\.svg"/);
+assert.match(brand,/data:image\/png;base64,/);
+assert.match(theme,/\.career-option:has\(input:checked\)/);
+console.log('OK: casillas de carrera accesibles, logo UC y envío autenticado.');
+
