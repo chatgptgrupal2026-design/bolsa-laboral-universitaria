@@ -384,6 +384,11 @@ Deno.serve(async req => {
   return response({ok:true,url:await signedAssetUrl("cv-estudiantes",cv.ruta_archivo)});
  }
  if(action==="public-offer-submit"){
+  // El formulario de compartir ofertas requiere una sesión y un rol autorizado.
+  const claims=await sessionFrom(req);
+  if(!claims)return fail("Iniciá sesión para compartir una oferta laboral.",401);
+  const authorized=await actorFor(req,["Empresa verificada","Secretaría Académica"]);
+  if(!authorized)return fail("Tu usuario no tiene permisos para compartir ofertas.",403);
   const company=safeField(input.razon_social,160),contact=safeField(input.persona_contacto,160),
     contactMail=safeField(input.correo_contacto,200).toLowerCase(),phone=safeField(input.telefono_contacto,30),
     title=safeField(input.titulo,200),description=safeField(input.descripcion,4000),
