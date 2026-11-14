@@ -3,6 +3,8 @@ const API = 'https://fxbhnyvlekulmuvvmrlr.supabase.co/functions/v1/bolsa-api';
 const state = {screen: 'inicio', offers: [], profile: null, token: ''};
 const $ = (selector) => document.querySelector(selector);
 const screens = new Set(['inicio', 'ofertas', 'registro', 'login', 'perfil', 'compartir', 'recuperar', 'restablecer']);
+const ROLES_PUEDEN_COMPARTIR = ['Empresa verificada','Secretaría Académica'];
+const canShareOffer = () => Boolean(getToken() && ROLES_PUEDEN_COMPARTIR.includes(state.profile?.tipo));
 const getToken = () => sessionStorage.getItem('bolsa-token') || localStorage.getItem('bolsa-token') || '';
 function clean(text) {return String(text ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function setAlert(id, message, success = false){const el = $(id);el.textContent = message;el.className = 'alert' + (success ? ' success' : '');}
@@ -29,6 +31,18 @@ function navigate(target,fromHistory=false){
  let to=route[0],section=route[1]||'inicio';
  if(!screens.has(to))to='inicio';
  if(getToken() && ['registro','login','recuperar','restablecer'].includes(to)){to='perfil';section='inicio';}
+ // No permitir la página de carga a invitados ni estudiantes, incluso con URL directa.
+ if(to==='compartir' && !canShareOffer()){
+  if(!getToken()){to='login';}
+  else if(!state.profile){
+   request('me',{},true).then(result=>{
+    state.profile=result.profile;
+    updateHeader();
+    navigate(canShareOffer()?'compartir':'perfil/inicio');
+   }).catch(()=>{logout(false);navigate('login');});
+   return;
+  }else{to='perfil';section='inicio';}
+ }
  const previous=state.screen;
  state.screen=to;
  const dest=to==='perfil'?'perfil/'+section:to;
@@ -52,6 +66,11 @@ function updateHeader(){
  nav.dataset.nav=loggedIn?'perfil':'login';
  // Ocultar todos los accesos a Registrarse/Crear cuenta mientras haya sesión.
  for(const btn of document.querySelectorAll('[data-nav="registro"]')) btn.classList.toggle('hidden',loggedIn);
+ // No mostrar "Compartir oferta" a invitados ni a roles sin permiso.
+ const shareVisible=canShareOffer();
+ for(const btn of document.querySelectorAll('[data-nav="compartir"]'))btn.classList.toggle('hidden',!shareVisible);
+ const panel=$('#company-share-panel');
+ if(panel)panel.classList.toggle('hidden',!shareVisible);
 }
 async function loadOffers(){
  const status=$('#offers-status'),list=$('#offers-list');
@@ -89,6 +108,7 @@ async function loadProfile(){
  try{
   const data=await request('me',{},true);
   state.profile=data.profile;
+  updateHeader();
   const perfil=data.profile;
   if(perfil.tipo==='Estudiante'){
    window.BolsaPortal?.clear();
@@ -186,3 +206,9 @@ window.addEventListener('popstate',()=>navigate(location.hash.slice(1)||'inicio'
 window.addEventListener('hashchange',()=>navigate(location.hash.slice(1)||'inicio',true));
 updateHeader();
 navigate(location.hash.slice(1)||'inicio',true);
+// Si se conservó la sesión al recargar una página pública, recuperar
+// el rol desde el servidor antes de revelar acciones privilegiadas.
+if(getToken() && !state.profile && !['perfil','compartir'].includes(state.screen)){
+ request('me',{},true).then(result=>{state.profile=result.profile;updateHeader();})
+ .catch(()=>logout(false));
+}
