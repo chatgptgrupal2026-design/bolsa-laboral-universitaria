@@ -20,6 +20,7 @@ async function ensureCareers(){
  return careers;
 }
 async function populateShareCareers(){
+ if(!canShareOffer())return;
  await ensureCareers();
  const sel=document.getElementById('share-careers');if(!sel)return;
  const values=[...sel.selectedOptions].map(x=>x.value);
@@ -295,12 +296,19 @@ document.addEventListener('submit',async e=>{
  if(f.id==='share-offer-form'){
   e.preventDefault();
   const alert=document.getElementById('share-alert');
+  // Los permisos se vuelven a comprobar en Supabase antes de guardar.
+  if(!canShareOffer()){
+   alert.textContent='No tenés permiso para compartir ofertas. Iniciá sesión con una cuenta autorizada.';
+   alert.className='alert';
+   navigate(getToken()?'perfil/inicio':'login');
+   return;
+  }
   try{
    const payload=Object.fromEntries(new FormData(f));
    payload.carreras=[...document.getElementById('share-careers').selectedOptions].map(x=>Number(x.value));
    if(!payload.carreras.length)throw new Error('Seleccioná una carrera.');
    Object.assign(payload,await readFile(document.getElementById('share-file').files?.[0]));
-   const result=await request('public-offer-submit',payload);
+   const result=await request('public-offer-submit',payload,true);
    f.reset();
    alert.textContent=result.message;alert.className='alert success';
   }catch(err){alert.textContent=err.message;alert.className='alert';}
@@ -333,5 +341,5 @@ document.addEventListener('submit',async e=>{
  }
 });
 window.BolsaPortal={open,select,clear,populateShareCareers};
-if(location.hash==='#compartir')populateShareCareers();
+// La navegación principal verifica el rol antes de abrir Compartir oferta.
 })();
