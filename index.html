@@ -142,15 +142,21 @@
           <h2>Enviar oferta para revisión</h2><p class="muted">Los campos indicados son obligatorios.</p>
           <div class="field"><label for="share-company">Razón social *</label><input id="share-company" name="razon_social" required maxlength="160" /></div>
           <div class="field-grid">
-            <div class="field"><label for="share-contact">Persona de contacto *</label><input id="share-contact" name="persona_contacto" required /></div>
-            <div class="field"><label for="share-email">Correo de contacto *</label><input id="share-email" name="correo_contacto" type="email" required /></div>
+            <div class="field"><label for="share-contact">Persona de contacto *</label><input id="share-contact" name="persona_contacto" maxlength="120" required /></div>
+            <div class="field"><label for="share-email">Correo de contacto *</label><input id="share-email" name="correo_contacto" type="email" maxlength="160" required /></div>
             <div class="field"><label for="share-phone">Teléfono</label><input id="share-phone" name="telefono_contacto" type="tel" /></div>
             <div class="field"><label for="share-type">Tipo *</label><select id="share-type" name="tipo" required><option value="Empleo">Empleo</option><option value="Pasantía">Pasantía</option></select></div>
           </div>
-          <div class="field"><label for="share-title">Título de la oferta *</label><input id="share-title" name="titulo" required maxlength="200" /></div>
+          <div class="field"><label for="share-title">Título de la oferta *</label><input id="share-title" name="titulo" required maxlength="180" /></div>
           <div class="field"><label for="share-description">Descripción *</label><textarea id="share-description" name="descripcion" required rows="4"></textarea></div>
           <div class="field"><label for="share-requirements">Requisitos *</label><textarea id="share-requirements" name="requisitos" required rows="3"></textarea></div>
-          <div class="field"><label for="share-careers">Carreras relacionadas * (seleccioná una o más)</label><select id="share-careers" name="carreras" multiple required size="3"></select></div>
+          <fieldset class="field career-choice" id="share-careers">
+            <legend>Carreras relacionadas <span aria-hidden="true">*</span></legend>
+            <div id="share-career-options" class="career-options" aria-live="polite">
+              <p class="muted">Cargando carreras disponibles...</p>
+            </div>
+            <small id="share-career-help">Marcá al menos una carrera. Podés elegir varias.</small>
+          </fieldset>
           <div class="field-grid">
             <div class="field"><label for="share-medium-type">Medio para postularse</label><select id="share-medium-type" name="medio_tipo"><option value="Correo">Correo</option><option value="Enlace">Enlace externo HTTPS</option></select></div>
             <div class="field"><label for="share-medium-value">Correo o enlace *</label><input id="share-medium-value" name="medio_valor" placeholder="reclutamiento@empresa.com" required /></div>
