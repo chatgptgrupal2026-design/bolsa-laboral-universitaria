@@ -271,11 +271,11 @@ Deno.serve(async req => {
   const actor=await actorFor(req,["Secretaría Académica"]);if(!actor)return fail("Acceso de Secretaría requerido.",401);
   const isCompany=action==="secretary-create-company";
   const username=safeField(input.usuario,80).toLowerCase(),
-   email=safeField(input.correo,200).toLowerCase(),
+   email=safeField(input.correo,160).toLowerCase(),
    name=safeField(isCompany?input.razon_social:input.nombre,160),
    last=safeField(input.apellido,120),
-   ruc=safeField(input.ruc,30),
-   contact=safeField(input.persona_contacto,160),
+   ruc=safeField(input.ruc,25),
+   contact=safeField(input.persona_contacto,120),
    instance=safeField(input.instancia,60);
   if(!/^[a-z0-9._-]{3,80}$/.test(username)||!validEmail(email)||!name)return fail("Completá nombre, usuario y correo válido.");
   if(isCompany&&(!ruc||!contact))return fail("Completá el RUC y el contacto de la empresa.");
@@ -306,7 +306,7 @@ Deno.serve(async req => {
   if(!found.length)return fail("Registro no encontrado.",404);
   if(found[0].id_usuario===actor.user.id_usuario&&!enabled)return fail("No podés deshabilitar tu propio usuario.",409);
   const data=isCompany?
-   {razon_social:safeField(input.razon_social,160),persona_contacto:safeField(input.persona_contacto,160),correo_contacto:safeField(input.correo_contacto,200).toLowerCase(),telefono:safeField(input.telefono,30)||null,habilitada:enabled}:
+   {razon_social:safeField(input.razon_social,160),persona_contacto:safeField(input.persona_contacto,120),correo_contacto:safeField(input.correo_contacto,160).toLowerCase(),telefono:safeField(input.telefono,30)||null,habilitada:enabled}:
    {nombre:safeField(input.nombre,100),apellido:safeField(input.apellido,100),instancia:safeField(input.instancia,60),habilitado:enabled};
   if(isCompany&&(!data.razon_social||!data.persona_contacto||!validEmail(data.correo_contacto)))return fail("Completá los datos de la empresa.");
   if(!isCompany&&(!data.nombre||!data.apellido||!["Centro de Estudiantes","Secretaría Académica"].includes(data.instancia)))return fail("Datos de revisor inválidos.");
@@ -323,7 +323,7 @@ Deno.serve(async req => {
  if(action==="company-profile-save"){
   const actor=await actorFor(req,["Empresa verificada"]);if(!actor)return fail("Acceso de empresa requerido.",401);
   const name=safeField(input.razon_social,150),description=safeField(input.descripcion,1500),
-        contact=safeField(input.persona_contacto,150),email=safeField(input.correo_contacto,200).toLowerCase(),
+        contact=safeField(input.persona_contacto,120),email=safeField(input.correo_contacto,160).toLowerCase(),
         phone=safeField(input.telefono,30);
   if(!name||!contact||!validEmail(email)||(phone&&!/^[+0-9 ()-]{5,30}$/.test(phone)))return fail("Revisá la razón social y los datos de contacto.");
   await db("empresa_verificada",{id_empresa:"eq."+actor.company.id_empresa},{razon_social:name,descripcion:description||null,persona_contacto:contact,correo_contacto:email,telefono:phone||null},"PATCH");
@@ -332,7 +332,7 @@ Deno.serve(async req => {
  if(action==="company-offer-save"){
   const actor=await actorFor(req,["Empresa verificada"]);if(!actor)return fail("Acceso de empresa requerido.",401);
   const ids=careersInput(input.carreras),id=numberId(input.offer_id);
-  const title=safeField(input.titulo,200),kind=safeField(input.tipo,30),description=safeField(input.descripcion,4000),requirements=safeField(input.requisitos,4000);
+  const title=safeField(input.titulo,180),kind=safeField(input.tipo,20),description=safeField(input.descripcion,4000),requirements=safeField(input.requisitos,4000);
   const indefinite=Boolean(input.vigencia_indefinida),end=safeField(input.fecha_vencimiento,10);
   if(!title||!["Empleo","Pasantía"].includes(kind)||!description||!requirements||(!indefinite&&(!/^\d{4}-\d{2}-\d{2}$/.test(end)||end<=pyDate())))return fail("Completá título, tipo, descripción, requisitos y una vigencia futura.");
   await checkCareers(ids);
@@ -531,7 +531,7 @@ Deno.serve(async req => {
  }
  if(action==="student-academic-save"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
-  const correo=safeField(input.correo,200).toLowerCase();
+  const correo=safeField(input.correo,160).toLowerCase();
   const telefono=safeField(input.telefono,25);
   const fecha=safeField(input.fecha_nacimiento,10);
   const semestre=input.semestre_actual==null || String(input.semestre_actual).trim()===""?null:Number(input.semestre_actual);
@@ -572,7 +572,18 @@ Deno.serve(async req => {
    return response({ok:true,message:"Registro eliminado."});
   }
   const data={};
-  for(const field of item.fields)data[field]=field==="anio"?(input.anio?Number(input.anio):null):(safeField(input[field],250)||null);
+  const maxByTable={
+   experiencia_laboral:{empresa:140,cargo:120,fecha_inicio:10,fecha_fin:10},
+   idioma:{nombre:80,nivel:60},
+   capacitacion:{tipo:30,nombre:180,institucion:140}
+  };
+  for(const field of item.fields){
+   if(field==="anio"){data[field]=input.anio?Number(input.anio):null;continue;}
+   const raw=String(input[field]??"").trim();
+   const max=maxByTable[item.table][field];
+   if(raw.length>max)return fail("El campo "+field+" supera los "+max+" caracteres permitidos.");
+   data[field]=raw||null;
+  }
   if(item===itemTables.experiencia){
    if(!data.empresa||!data.cargo)return fail("Ingresá la empresa y el cargo.");
    if(data.fecha_inicio&&data.fecha_fin&&data.fecha_fin<data.fecha_inicio)return fail("La fecha final no puede ser anterior a la inicial.");
@@ -647,7 +658,7 @@ Deno.serve(async req => {
   const id=numberId(input.offer_id);if(!id)return fail("Oferta inválida.");
   const arr=await db("oferta_laboral",{select:"id_oferta,id_empresa,estado,fecha_vencimiento,vigencia_indefinida",id_oferta:"eq."+id,limit:1});
   const offer=arr[0];
-  if(!offer||offer.estado!=="Publicada"||!offer.id_empresa||(!offer.vigencia_indefinida&&offer.fecha_vencimiento&&offer.fecha_vencimiento<new Date().toISOString().slice(0,10)))return fail("La oferta no admite postulaciones.",409);
+  if(!offer||offer.estado!=="Publicada"||!offer.id_empresa||(!offer.vigencia_indefinida&&offer.fecha_vencimiento&&offer.fecha_vencimiento<pyDate()))return fail("La oferta no admite postulaciones.",409);
   const cv=await db("curriculum_vitae",{select:"id_cv",id_estudiante:"eq."+auth.student.id_estudiante,limit:1});
   if(!cv.length)return fail("Primero tenés que cargar tu currículum.",409);
   const previous=await db("postulacion",{select:"id_postulacion",id_estudiante:"eq."+auth.student.id_estudiante,id_oferta:"eq."+id,limit:1});
