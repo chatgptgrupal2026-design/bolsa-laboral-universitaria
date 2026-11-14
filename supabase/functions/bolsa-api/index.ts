@@ -389,9 +389,9 @@ Deno.serve(async req => {
   if(!claims)return fail("Iniciá sesión para compartir una oferta laboral.",401);
   const authorized=await actorFor(req,["Empresa verificada","Secretaría Académica"]);
   if(!authorized)return fail("Tu usuario no tiene permisos para compartir ofertas.",403);
-  const company=safeField(input.razon_social,160),contact=safeField(input.persona_contacto,160),
-    contactMail=safeField(input.correo_contacto,200).toLowerCase(),phone=safeField(input.telefono_contacto,30),
-    title=safeField(input.titulo,200),description=safeField(input.descripcion,4000),
+  const company=safeField(input.razon_social,160),contact=safeField(input.persona_contacto,120),
+    contactMail=safeField(input.correo_contacto,160).toLowerCase(),phone=safeField(input.telefono_contacto,30),
+    title=safeField(input.titulo,180),description=safeField(input.descripcion,4000),
     requirements=safeField(input.requisitos,4000),kind=safeField(input.tipo,30),
     mediumType=safeField(input.medio_tipo,20),mediumValue=safeField(input.medio_valor,350);
   const ids=careersInput(input.carreras);
