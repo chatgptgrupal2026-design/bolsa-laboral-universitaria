@@ -612,6 +612,20 @@ Deno.serve(async req => {
   }
   return response({ok:true,message:"Currículum guardado correctamente."});
  }
+ if(action==="student-cv-remove"){
+  const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
+  const current=(await db("curriculum_vitae",{select:"id_cv,ruta_archivo",id_estudiante:"eq."+auth.student.id_estudiante,limit:1}))[0];
+  if(!current)return fail("No tenés un currículum cargado.",404);
+  // Supabase Storage API elimina el archivo físico además de sus metadatos.
+  if(current.ruta_archivo){
+   const removed=await fetch(BASE+"/storage/v1/object/cv-estudiantes/"+current.ruta_archivo,{
+    method:"DELETE",headers:{"apikey":ADMIN_KEY,"authorization":"Bearer "+ADMIN_KEY}
+   });
+   if(!removed.ok && removed.status!==404)return fail("No se pudo eliminar el archivo del almacenamiento.",502);
+  }
+  await db("curriculum_vitae",{id_cv:"eq."+current.id_cv,id_estudiante:"eq."+auth.student.id_estudiante},null,"DELETE");
+  return response({ok:true,message:"Currículum eliminado correctamente."});
+ }
  if(action==="student-cv-view"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const cv=(await db("curriculum_vitae",{select:"ruta_archivo",id_estudiante:"eq."+auth.student.id_estudiante,limit:1}))[0];
