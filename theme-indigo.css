@@ -385,3 +385,35 @@ input[type=file]::file-selector-button{background:#F0ECFF;color:#4F39AE;border:1
  html{scroll-behavior:auto}
  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+
+/* Selección de carreras por casillas: accesible en escritorio y teléfono. */
+.career-choice{min-width:0;width:100%;border:1px solid #DFDCF0;border-radius:13px;padding:16px 16px 13px;background:#FBFAFF;margin:17px 0}
+.career-choice legend{font-weight:750;font-size:13px;color:#4D3F96;padding:0 8px}
+.career-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,235px),1fr));gap:11px;margin:7px 0 10px}
+.career-option{display:flex;align-items:center;gap:11px;min-height:52px;padding:12px 14px;background:#FFF;border:1px solid #E2DDF4;border-radius:11px;font-size:13px;color:#37305E;font-weight:650;cursor:pointer;user-select:none;transition:border-color .15s,background .15s,box-shadow .15s}
+.career-option:hover{border-color:#9F8BE6;background:#F7F4FF}
+.career-option:has(input:checked){border-color:#7964D5;background:#F0EBFF;box-shadow:0 0 0 2px #C9BBFD55}
+.career-option input[type=checkbox]{width:20px;height:20px;min-width:20px;min-height:20px;accent-color:#6548C6;cursor:pointer;margin:0}
+.career-check-mark{display:none}
+.career-choice small{display:block;color:#777091;font-size:11px}
+.career-choice.is-invalid{border-color:#C74F61;background:#FFF6F7}
+.career-choice:focus-within{box-shadow:0 0 0 3px #A78BFA44}
+#share-offer-form .career-choice{grid-column:1/-1}
+#share-offer-form .career-option,#company-offer-form .career-option,#approved-edit-form .career-option{font-size:13px}
+#share-offer-form #share-submit{min-height:49px}
+.uc-logo{display:block;object-fit:contain;object-position:center;flex-shrink:0;background:transparent!important;border:0!important;box-shadow:none!important;border-radius:50%!important}
+.brand-mark.uc-logo{height:44px;width:44px;padding:0;object-fit:contain}
+.dashboard-brand-icon.uc-logo{height:40px;width:40px;background:#fff!important;border-radius:50%}
+.auth-mini-logo.uc-auth-logo{display:block;width:44px;height:44px;padding:0;background:transparent;box-shadow:none;border-radius:50%;object-fit:contain}
+.footer-brand-uc{display:flex;align-items:center;gap:14px;min-width:0}
+.footer-brand-uc img{object-fit:contain;border-radius:50%;flex-shrink:0}
+.footer-brand-uc div{min-width:0}
+@media(max-width:520px){
+ .career-choice{padding:13px 12px 11px}
+ .career-options{grid-template-columns:1fr;gap:9px}
+ .career-option{min-height:56px;padding:13px 12px;font-size:14px}
+ .brand-mark.uc-logo{width:39px;height:39px}
+ .footer-brand-uc{align-items:flex-start}
+ .footer-brand-uc img{width:36px;height:36px}
+}
