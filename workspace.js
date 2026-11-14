@@ -31,7 +31,7 @@ function shell({items,active,person,identifier,role,title,description,contentId,
  ).join('');
  return '<div class="dashboard-shell">'+
   '<aside class="dashboard-sidebar" id="dashboard-sidebar" aria-label="Menú de mi espacio">'+
-   '<div class="dashboard-side-brand"><span class="dashboard-brand-icon">FCT</span><div><strong>Mi espacio</strong><small>Bolsa Laboral Universitaria</small></div></div>'+
+   '<div class="dashboard-side-brand"><img class="dashboard-brand-icon uc-logo" src="./assets/uc-logo.svg" alt="Logo de la Universidad Católica" width="39" height="39" /><div><strong>Mi espacio</strong><small>Bolsa Laboral Universitaria</small></div></div>'+
    '<div class="dashboard-identity"><span class="dashboard-avatar">'+esc((person||'U').trim().charAt(0).toUpperCase())+'</span><div><strong>'+esc(person||'Mi cuenta')+'</strong><small>'+esc(identifier||role||'Usuario')+'</small></div></div>'+
    '<div class="dashboard-nav-label">NAVEGACIÓN</div><nav class="dashboard-side-nav" aria-label="Secciones del panel">'+nav+'</nav>'+
    '<div class="dashboard-side-footer"><div class="dashboard-side-role">'+esc(role||'Bolsa Laboral')+'</div>'+
