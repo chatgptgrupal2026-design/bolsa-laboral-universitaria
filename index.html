@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#27235B" />
   <meta name="description" content="Bolsa de Trabajo Universitaria de la Facultad de Ciencias y Tecnología." />
-  <title>Bolsa de Trabajo | Facultad de Ciencias y Tecnología</title>
+  <title>Bolsa de Trabajo | Universidad Católica</title>
+  <link rel="icon" type="image/svg+xml" href="./assets/uc-logo.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -20,7 +21,7 @@
   <header class="topbar">
     <div class="wrap topbar-inner">
       <a class="brand" href="#inicio" data-nav="inicio" aria-label="Ir al inicio">
-        <span class="brand-mark" aria-hidden="true">FCT</span>
+        <img class="brand-mark uc-logo" src="./assets/uc-logo.svg" alt="Universidad Católica" width="42" height="42" />
         <span class="brand-copy"><strong>Bolsa de Trabajo</strong><small>Facultad de Ciencias y Tecnología</small></span>
       </a>
       <button type="button" id="mobile-menu-toggle" class="mobile-nav-toggle" aria-label="Abrir menú de navegación" aria-controls="main-navigation" aria-expanded="false">
@@ -78,7 +79,7 @@
 
     <section class="screen hidden" id="screen-login" data-screen="login">
       <div class="auth-page"><div class="auth-shell"><div class="auth-intro"><span class="eyebrow dark">ACCESO A LA PLATAFORMA</span><h1>Bienvenido nuevamente</h1><p>Ingresá para acceder a las oportunidades laborales y gestionar tu perfil universitario.</p><div class="auth-decoration" aria-hidden="true">✦</div></div><div class="auth-panel">
-        <div class="auth-heading"><span class="auth-mini-logo">FCT</span><h2>Iniciar sesión</h2><p>Ingresá tu matrícula (estudiante) o nombre de usuario (empresa, Centro de Estudiantes o Secretaría Académica), con tu contraseña.</p></div>
+        <div class="auth-heading"><img class="auth-mini-logo uc-auth-logo" src="./assets/uc-logo.svg" alt="Logo UC" width="44" height="44" /><h2>Iniciar sesión</h2><p>Ingresá tu matrícula (estudiante) o nombre de usuario (empresa, Centro de Estudiantes o Secretaría Académica), con tu contraseña.</p></div>
         <form id="login-form" novalidate>
           <div class="field"><label for="login-user">Usuario o matrícula</label><input id="login-user" name="usuario" placeholder="Ej.: c06559" autocapitalize="off" spellcheck="false" autocomplete="username" required /></div>
           <div class="field"><label for="login-password">Contraseña</label><input id="login-password" name="password" type="password" placeholder="La que creaste al registrarte" autocomplete="current-password" required /><button type="button" class="text-button" id="toggle-login-password" aria-pressed="false" aria-controls="login-password">Mostrar contraseña</button></div>
@@ -179,7 +180,7 @@
   </main>
   <dialog id="offer-modal" aria-label="Detalle de la oferta laboral"></dialog>
 
-  <footer><div class="wrap footer-content"><div><strong>Bolsa de Trabajo Universitaria</strong><p>Facultad de Ciencias y Tecnología · Proyecto académico 2026</p></div><span>Desarrollado para Ingeniería del Software 2</span></div></footer>
+  <footer><div class="wrap footer-content"><div class="footer-brand-uc"><img src="./assets/uc-logo.svg" alt="Universidad Católica" width="42" height="42" loading="lazy" /><div><strong>Bolsa de Trabajo Universitaria</strong><p>Facultad de Ciencias y Tecnología · Proyecto académico 2026</p></div></div><span>Desarrollado para Ingeniería del Software 2</span></div></footer>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
