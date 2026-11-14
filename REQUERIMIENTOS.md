@@ -19,7 +19,7 @@ Este seguimiento corresponde a los **24 casos de uso del TPF04** y al DER del TP
 | CU11 | Empresa verificada modifica sus ofertas | Código publicado; pendiente prueba |
 | CU12 | Empresa verificada da de baja ofertas y cierra postulaciones | Código publicado; pendiente prueba |
 | CU13 | Empresa ve postulantes y CV privado | Código publicado; pendiente prueba |
-| CU14 | Empresa no verificada comparte oferta con adjunto opcional | Código publicado; pendiente prueba |
+| CU14 | Envío de oferta externa con adjunto opcional | Acceso restringido a Empresa verificada o Secretaría Académica; pendiente prueba con sesión |
 | CU15 | Revisores consultan ofertas pendientes, detalle y adjuntos | Código publicado; pendiente prueba |
 | CU16 | Revisor aprueba (14 días) o rechaza con motivo | Código publicado; correo requiere configuración |
 | CU17 | Vencimiento automático y cierre de postulaciones | Programado en pg_cron, ejecución de comprobación correcta |
@@ -30,6 +30,12 @@ Este seguimiento corresponde a los **24 casos de uso del TPF04** y al DER del TP
 | CU22 | Secretaría gestiona revisores | Código publicado; correo de credenciales requiere configuración |
 | CU23 | Revisor edita o da de baja ofertas externas aprobadas | Código publicado; pendiente prueba |
 | CU24 | Empresa verificada actualiza su perfil | Código publicado; pendiente prueba |
+
+## Restricción de acceso a «Compartir oferta»
+
+Por decisión de producto del 14/11/2026, **la opción se oculta a invitados, estudiantes y usuarios del Centro de Estudiantes**. Solo puede ingresar un usuario autenticado con rol **Empresa verificada** o **Secretaría Académica**, y el backend comprueba el rol antes de aceptar cualquier envío. La URL directa también está restringida. Las publicaciones propias de empresas verificadas siguen disponibles en «Mi espacio → Mis ofertas».
+
+**Diferencia respecto del TPF04 original:** CU14 describía el envío de ofertas por empresas no verificadas sin iniciar sesión. Este ajuste cambia ese requisito de acceso y debe reflejarse en el documento académico si se mantiene para la entrega.
 
 ## Infraestructura
 
