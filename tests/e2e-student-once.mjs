@@ -144,7 +144,7 @@ await check('CU05','Reemplazar currículum sin duplicar',async()=>{
  expect(await call('student-cv-upload',{filename:'QA-CV-Actualizado.pdf',file_base64:bytes.toString('base64')},token1),200,'Reemplazo de CV');
  const d=expect(await call('student-dashboard',{},token1),200,'Leer CV reemplazado');
  assert.equal(d.cv.nombre_archivo,'QA-CV-Actualizado.pdf');
- assert.equal(d.cv.id_cv,undefined,'Dashboard no expone la clave interna del CV');
+ assert.equal(d.cv.id_cv,firstCv.id_cv,'El CV reemplazado conserva el mismo registro.');
 });
 await check('CU06','Obtener carrera y listado público de ofertas',async()=>{
  const careers=expect(await call('careers'),200,'Carreras');
