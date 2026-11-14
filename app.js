@@ -26,6 +26,15 @@ async function request(action, extras={}, useToken=false){
     throw error;
   }finally{clearTimeout(timer);}
 }
+function closeMobileNavigation(){
+ const header=document.querySelector('.topbar');
+ const trigger=$('#mobile-menu-toggle');
+ header?.classList.remove('is-open');
+ if(trigger){
+  trigger.setAttribute('aria-expanded','false');
+  trigger.setAttribute('aria-label','Abrir menú de navegación');
+ }
+}
 function navigate(target,fromHistory=false){
  const route=String(target||'inicio').replace(/^#/,'').split('/');
  let to=route[0],section=route[1]||'inicio';
@@ -45,6 +54,7 @@ function navigate(target,fromHistory=false){
  }
  const previous=state.screen;
  state.screen=to;
+ closeMobileNavigation();
  const dest=to==='perfil'?'perfil/'+section:to;
  if(!fromHistory && location.hash!=='#'+dest)history.pushState(null,'','#'+dest);
  if(fromHistory && location.hash!=='#'+dest)history.replaceState(null,'','#'+dest);
@@ -126,6 +136,17 @@ async function loadProfile(){
 }
 function logout(navigateAway=true){localStorage.removeItem('bolsa-token');sessionStorage.removeItem('bolsa-token');state.token='';state.profile=null;window.BolsaStudent?.clear();window.BolsaPortal?.clear();updateHeader();if(navigateAway) navigate('inicio');}
 for(const btn of document.querySelectorAll('[data-nav]')) btn.addEventListener('click',e=>{e.preventDefault();navigate(btn.dataset.nav);});
+const mobileToggle=$('#mobile-menu-toggle');
+mobileToggle?.addEventListener('click',()=>{
+ const open=document.querySelector('.topbar')?.classList.toggle('is-open')||false;
+ mobileToggle.setAttribute('aria-expanded',String(open));
+ mobileToggle.setAttribute('aria-label',open?'Cerrar menú de navegación':'Abrir menú de navegación');
+});
+document.addEventListener('click',e=>{
+ if(!e.target.closest('.topbar'))closeMobileNavigation();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMobileNavigation();});
+window.addEventListener('resize',()=>{if(window.innerWidth>800)closeMobileNavigation();});
 $('#filter-type').addEventListener('change',renderOffers);
 $('#filter-career').addEventListener('change',renderOffers);
 $('#clear-filters').addEventListener('click',()=>{$('#filter-type').value='';$('#filter-career').value='';renderOffers();});
