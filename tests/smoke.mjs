@@ -51,6 +51,12 @@ const secretaryDenied=await call("secretary-dashboard");
 assert.equal(secretaryDenied.status,401,JSON.stringify(secretaryDenied.body));
 console.log("OK: CU10-CU24, módulos de empresa, revisión y Secretaría requieren sesión.");
 
+// CU14: una persona sin sesión nunca puede enviar ofertas al backend.
+const shareDenied=await call("public-offer-submit",{titulo:"Prueba sin permisos"});
+assert.equal(shareDenied.status,401,JSON.stringify(shareDenied.body));
+assert.equal(shareDenied.body.ok,false);
+console.log("OK: compartir ofertas exige autenticación antes de validar los datos.");
+
 const invalidReset=await call("password-reset-complete",{token:"invalido",password:"pruebaSegura2026"});
 assert.equal(invalidReset.status,400,JSON.stringify(invalidReset.body));
 console.log("OK: CU18 rechaza token de recuperación inválido.");
