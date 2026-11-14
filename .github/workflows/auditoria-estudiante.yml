@@ -1,0 +1,27 @@
+name: Auditoría funcional — estudiante (ejecución controlada)
+
+on:
+  push:
+    paths:
+      - 'tests/e2e-student-once.mjs'
+      - '.github/workflows/auditoria-estudiante.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas-integracion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Obtener proyecto
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar sintaxis
+        run: node --check tests/e2e-student-once.mjs
+      - name: Ejecutar flujos reales de estudiante
+        run: node tests/e2e-student-once.mjs
