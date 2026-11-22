@@ -17,6 +17,10 @@ const careers=await call("careers");
 assert.equal(careers.status,200,JSON.stringify(careers.body));
 assert.equal(careers.body.ok,true);
 assert.ok(careers.body.items.some(x=>x.nombre==="Análisis de Sistemas"));
+assert.ok(careers.body.items.length>=9,"El catálogo debe incluir al menos nueve carreras CyT");
+for(const name of ["Arquitectura","Diseño Gráfico","Diseño Industrial","Ingeniería Ambiental","Ingeniería Civil","Ingeniería Industrial","Ingeniería Electrónica","Ingeniería Informática"]){
+ assert.ok(careers.body.items.some(x=>x.nombre===name),"Falta la carrera "+name);
+}
 console.log("OK: CU01 catálogo de carreras.");
 
 const offers=await call("offers");
@@ -62,3 +66,7 @@ assert.equal(invalidReset.status,400,JSON.stringify(invalidReset.body));
 console.log("OK: CU18 rechaza token de recuperación inválido.");
 
 console.log("Pruebas públicas completadas. Los flujos autenticados se verifican desde la interfaz.");
+
+const privateProfileDenied=await call("company-applicant-profile",{application_id:1});
+assert.equal(privateProfileDenied.status,401,JSON.stringify(privateProfileDenied.body));
+console.log("OK: el perfil completo de un postulante exige autenticación de empresa.");
