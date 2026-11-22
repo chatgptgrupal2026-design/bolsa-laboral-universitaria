@@ -167,10 +167,15 @@ await check('CU05','Reemplazar currículum sin duplicar',async()=>{
  assert.equal(d.cv.nombre_archivo,'QA-CV-Actualizado.pdf');
  assert.equal(d.cv.id_cv,firstCv.id_cv,'El CV reemplazado conserva el mismo registro.');
 });
-await check('CU06','Obtener carrera y listado público de ofertas',async()=>{
+await check('CU06','Bloquear catálogo y detalle para visitantes',async()=>{
+ expect(await call('offers'),401,'Catálogo privado');
+ expect(await call('offer-detail',{offer_id:1}),401,'Detalle privado');
+ expect(await call('offers',{},'token-invalido'),401,'Token falso');
+});
+await check('CU06','Consultar carreras y ofertas con sesión habilitada',async()=>{
  const careers=expect(await call('careers'),200,'Carreras');
  assert.ok(careers.items.some(c=>c.nombre==='Análisis de Sistemas'));
- const offers=expect(await call('offers'),200,'Ofertas');
+ const offers=expect(await call('offers',{},token1),200,'Ofertas con sesión');
  assert.ok(Array.isArray(offers.items));
  const demo=offers.items.find(o=>o.titulo==='DEMO · Pasantía de Desarrollo de Software'&&o.estado==='Publicada');
  assert.ok(demo,'No se encontró oferta DEMO publicada');
@@ -179,7 +184,7 @@ await check('CU06','Obtener carrera y listado público de ofertas',async()=>{
 });
 await check('CU07','Ver detalle de oferta verificada',async()=>{
  assert.ok(offerId);
- const d=expect(await call('offer-detail',{offer_id:offerId}),200,'Detalle');
+ const d=expect(await call('offer-detail',{offer_id:offerId},token1),200,'Detalle con sesión');
  assert.equal(d.offer.verificada,true);
  assert.equal(d.offer.id_oferta,offerId);
 });
