@@ -707,9 +707,13 @@ Deno.serve(async req => {
  if(action==="student-withdraw"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const id=numberId(input.application_id);if(!id)return fail("Postulación inválida.");
-  const arr=await db("postulacion",{select:"id_postulacion,estado",id_postulacion:"eq."+id,id_estudiante:"eq."+auth.student.id_estudiante,limit:1});
+  const arr=await db("postulacion",{select:"id_postulacion,id_oferta,estado",id_postulacion:"eq."+id,id_estudiante:"eq."+auth.student.id_estudiante,limit:1});
   if(!arr.length||arr[0].estado!=="Activa")return fail("Esta postulación ya no se puede retirar.",409);
-  await db("postulacion",{id_postulacion:"eq."+id,id_estudiante:"eq."+auth.student.id_estudiante,estado:"eq.Activa"},{estado:"Retirada",fecha_retiro:new Date().toISOString()},"PATCH");
+  const offer=(await db("oferta_laboral",{select:"estado,fecha_vencimiento,vigencia_indefinida",id_oferta:"eq."+arr[0].id_oferta,limit:1}))[0];
+  if(!offer||offer.estado!=="Publicada"||(!offer.vigencia_indefinida&&offer.fecha_vencimiento&&offer.fecha_vencimiento<pyDate()))
+   return fail("Solo podés retirar postulaciones mientras la oferta esté vigente.",409);
+  const changed=await db("postulacion",{id_postulacion:"eq."+id,id_estudiante:"eq."+auth.student.id_estudiante,estado:"eq.Activa"},{estado:"Retirada",fecha_retiro:new Date().toISOString()},"PATCH");
+  if(!changed.length)return fail("Esta postulación ya fue modificada.",409);
   return response({ok:true,message:"Postulación retirada. No podrás volver a postularte a la misma oferta."});
  }
 
