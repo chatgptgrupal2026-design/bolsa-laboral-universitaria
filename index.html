@@ -31,7 +31,7 @@
       </button>
       <nav class="nav" id="main-navigation" aria-label="Navegación principal">
         <button type="button" data-nav="inicio" class="nav-link active">Inicio</button>
-        <button type="button" data-nav="ofertas" class="nav-link">Ofertas laborales</button>
+        <button type="button" data-nav="ofertas" class="nav-link hidden">Ofertas laborales</button>
         <button type="button" data-nav="compartir" class="nav-link hidden">Compartir oferta</button>
         <button type="button" data-nav="registro" class="nav-link">Registrarse</button>
         <button type="button" data-nav="login" class="nav-link nav-login" id="nav-session">Iniciar sesión</button>
@@ -45,9 +45,9 @@
         <div class="hero-content">
           <span class="eyebrow">OPORTUNIDADES PARA TU FUTURO</span>
           <h1>Tu próximo paso profesional comienza aquí.</h1>
-          <p>Un espacio para que estudiantes de la Facultad de Ciencias y Tecnología encuentren ofertas de empleo y pasantías en un mismo lugar.</p>
+          <p>Una bolsa de oportunidades exclusiva para estudiantes y usuarios autorizados de la Facultad de Ciencias y Tecnología. Iniciá sesión para consultar empleos y pasantías.</p>
           <div class="hero-actions">
-            <button class="btn btn-accent" data-nav="ofertas">Explorar oportunidades <span aria-hidden="true">↗</span></button>
+            <button class="btn btn-accent" id="hero-offers-cta" data-nav="login">Iniciar sesión para ver ofertas <span aria-hidden="true">↗</span></button>
             <button class="btn btn-outline-light" data-nav="registro">Crear cuenta</button>
           </div>
         </div>
@@ -61,7 +61,7 @@
       <div class="wrap cards-section">
         <div class="section-heading"><div><span class="eyebrow dark">PLATAFORMA UNIVERSITARIA</span><h2>Un lugar para conectar talentos y oportunidades</h2></div></div>
         <div class="features">
-          <article class="feature"><div class="feature-icon">▦</div><h3>Descubrí ofertas</h3><p>Consultá empleos y pasantías y filtrá según tu carrera.</p></article>
+          <article class="feature"><div class="feature-icon">▦</div><h3>Descubrí ofertas</h3><p>Ingresá con tu cuenta universitaria para consultar empleos y pasantías según tu carrera.</p></article>
           <article class="feature"><div class="feature-icon">◇</div><h3>Construí tu perfil</h3><p>Registrá tus datos académicos y profesionales y prepará tu CV.</p></article>
           <article class="feature"><div class="feature-icon">↗</div><h3>Postulate</h3><p>Accedé a ofertas de empresas verificadas mediante la plataforma.</p></article>
         </div>
@@ -70,7 +70,7 @@
     </section>
 
     <section class="screen hidden" id="screen-ofertas" data-screen="ofertas">
-      <div class="section-banner"><div class="wrap"><span class="eyebrow">BOLSA DE TRABAJO</span><h1>Ofertas laborales y pasantías</h1><p>Encontrá oportunidades que se adapten a tu formación.</p></div></div>
+      <div class="section-banner"><div class="wrap"><span class="eyebrow">BOLSA DE TRABAJO</span><h1>Ofertas laborales y pasantías</h1><p>Acceso exclusivo para usuarios con sesión iniciada de la comunidad universitaria.</p></div></div>
       <div class="wrap content-section">
         <div class="filter-bar"><div class="input-wrap"><label for="filter-type">Tipo de oportunidad</label><select id="filter-type"><option value="">Todas las ofertas</option><option value="Empleo">Empleo</option><option value="Pasantía">Pasantía</option></select></div><div class="input-wrap"><label for="filter-career">Carrera</label><select id="filter-career"><option value="">Todas las carreras</option></select></div><button id="clear-filters" class="text-button">Limpiar filtros</button></div>
         <div id="offers-status" class="status-message" role="status">Cargando ofertas...</div>
