@@ -45,7 +45,7 @@ assert.match(html,/rel="icon" type="image\/svg\+xml" href="\.\/assets\/uc-logo\.
 assert.match(workspace,/src="\.\/assets\/uc-logo\.svg"/);
 assert.match(brand,/data:image\/png;base64,/);
 assert.match(theme,/\.career-option:has\(input:checked\)/);
-console.log('OK: casillas de carrera accesibles, logo UC y envío autenticado.');
+console.log('OK: casillas de carrera, logo UC y envío externo.');
 
 const student=readFileSync(new URL('../student.js',import.meta.url),'utf8');
 const backend=readFileSync(new URL('../supabase/functions/bolsa-api/index.ts',import.meta.url),'utf8');
@@ -75,3 +75,13 @@ assert.match(html,/id="hero-offers-cta" data-nav="login"/);
 assert.match(portal,/request\('offer-detail',\{offer_id:Number\(edit\.dataset\.editOffer\)\},true\)/);
 assert.match(student,/request\('offer-detail',\{offer_id:Number\(id\)\},true\)/);
 console.log('OK: listado, detalle y navegación de ofertas protegidos para invitados.');
+
+assert.match(app,/const canShareOffer = \(\) => !getToken\(\)/);
+assert.match(html,/class="secondary-panel" id="company-share-panel"/);
+assert.match(html,/data-nav="compartir" class="nav-link"/);
+assert.match(html,/EMPRESAS SIN CUENTA/);
+assert.match(html,/name="sitio_web"/);
+assert.match(theme,/\.share-honeypot/);
+assert.match(backend,/if\(action==="public-offer-submit"\)\{[\s\S]*?const claims=await sessionFrom\(req\);/);
+assert.match(backend,/input\.sitio_web/);
+console.log('OK: CU14 puede recibir propuestas externas sin sesión y las ofertas siguen privadas.');
