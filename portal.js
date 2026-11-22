@@ -293,7 +293,7 @@ document.addEventListener('click',async e=>{
  if(e.target.closest('[data-cancel-offer]')){editingOffer=null;render();return;}
  const edit=e.target.closest('[data-edit-offer]');
  if(edit){
-  try{const d=await request('offer-detail',{offer_id:Number(edit.dataset.editOffer)});editingOffer=d.offer;render();}
+  try{const d=await request('offer-detail',{offer_id:Number(edit.dataset.editOffer)},true);editingOffer=d.offer;render();}
   catch(err){message(err.message,true);}return;
  }
  const drop=e.target.closest('[data-drop-offer]');
