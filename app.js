@@ -39,6 +39,8 @@ function navigate(target,fromHistory=false){
  const route=String(target||'inicio').replace(/^#/,'').split('/');
  let to=route[0],section=route[1]||'inicio';
  if(!screens.has(to))to='inicio';
+ // La portada y el registro son públicos; el catálogo requiere una cuenta.
+ if(to==='ofertas' && !getToken()){to='login';section='inicio';}
  if(getToken() && ['registro','login','recuperar','restablecer'].includes(to)){to='perfil';section='inicio';}
  // No permitir la página de carga a invitados ni estudiantes, incluso con URL directa.
  if(to==='compartir' && !canShareOffer()){
@@ -76,24 +78,39 @@ function updateHeader(){
  nav.dataset.nav=loggedIn?'perfil':'login';
  // Ocultar todos los accesos a Registrarse/Crear cuenta mientras haya sesión.
  for(const btn of document.querySelectorAll('[data-nav="registro"]')) btn.classList.toggle('hidden',loggedIn);
- // No mostrar "Compartir oferta" a invitados ni a roles sin permiso.
+ // Navegación privada: no revelar el catálogo ni el envío de ofertas a invitados.
+ const offerAccess=loggedIn&&Boolean(state.profile?.tipo);
+ for(const btn of document.querySelectorAll('.nav [data-nav="ofertas"]'))btn.classList.toggle('hidden',!offerAccess);
+ const heroCta=$('#hero-offers-cta');
+ if(heroCta){heroCta.dataset.nav=loggedIn?'ofertas':'login';heroCta.innerHTML=loggedIn?'Explorar oportunidades <span aria-hidden="true">↗</span>':'Iniciar sesión para ver ofertas <span aria-hidden="true">↗</span>';}
  const shareVisible=canShareOffer();
  for(const btn of document.querySelectorAll('[data-nav="compartir"]'))btn.classList.toggle('hidden',!shareVisible);
  const panel=$('#company-share-panel');
  if(panel)panel.classList.toggle('hidden',!shareVisible);
 }
 async function loadOffers(){
+ if(!getToken()){navigate('login');return;}
+ const token=getToken();
  const status=$('#offers-status'),list=$('#offers-list');
  status.classList.remove('hidden');status.textContent='Cargando ofertas...';list.innerHTML='';
+ state.offers=[];
  try{
-   const [offerData,careerData]=await Promise.all([request('offers'),request('careers')]);
+   const [offerData,careerData]=await Promise.all([request('offers',{},true),request('careers')]);
+   // Una petición anterior no puede reinsertar ofertas después de cerrar sesión.
+   if(token!==getToken()||state.screen!=='ofertas')return;
    state.offers=offerData.items||[];
    const select=$('#filter-career');
    const selected=select.value;
    select.innerHTML='<option value="">Todas las carreras</option>'+careerData.items.map(c=>'<option value="'+c.id_carrera+'">'+clean(c.nombre)+'</option>').join('');
    select.value=selected;
    renderOffers();
- }catch(err){status.textContent=err.message+' Intentá nuevamente.';}
+ }catch(err){
+  if(token!==getToken())return;
+  if(/iniciá sesión|cuenta habilitada|sesión inválida/i.test(err.message)){
+   logout(false);navigate('login');setAlert('#login-alert','Ingresá con tu cuenta para consultar las ofertas laborales.');return;
+  }
+  status.textContent=err.message+' Intentá nuevamente.';
+ }
 }
 function renderOffers(){
  const type=$('#filter-type').value,career=$('#filter-career').value;
@@ -134,7 +151,7 @@ async function loadProfile(){
   if(/sesión|cuenta/i.test(err.message)){logout(false);navigate('login');}
  }
 }
-function logout(navigateAway=true){localStorage.removeItem('bolsa-token');sessionStorage.removeItem('bolsa-token');state.token='';state.profile=null;window.BolsaStudent?.clear();window.BolsaPortal?.clear();updateHeader();if(navigateAway) navigate('inicio');}
+function logout(navigateAway=true){localStorage.removeItem('bolsa-token');sessionStorage.removeItem('bolsa-token');state.token='';state.profile=null;state.offers=[];const list=$('#offers-list');if(list)list.innerHTML='';const status=$('#offers-status');if(status)status.textContent='Iniciá sesión para consultar las ofertas laborales.';document.getElementById('offer-modal')?.close();window.BolsaStudent?.clear();window.BolsaPortal?.clear();updateHeader();if(navigateAway) navigate('inicio');}
 for(const btn of document.querySelectorAll('[data-nav]')) btn.addEventListener('click',e=>{e.preventDefault();navigate(btn.dataset.nav);});
 const mobileToggle=$('#mobile-menu-toggle');
 mobileToggle?.addEventListener('click',()=>{
