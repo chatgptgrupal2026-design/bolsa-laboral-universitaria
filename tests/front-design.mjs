@@ -85,3 +85,6 @@ assert.match(theme,/\.share-honeypot/);
 assert.match(backend,/if\(action==="public-offer-submit"\)\{[\s\S]*?const claims=await sessionFrom\(req\);/);
 assert.match(backend,/input\.sitio_web/);
 console.log('OK: CU14 puede recibir propuestas externas sin sesión y las ofertas siguen privadas.');
+
+assert.ok(portal.includes("if(location.hash.replace(/^#/,'').split('/')[0]==='compartir')populateShareCareers()"));
+console.log('OK: el enlace directo a CU14 carga las carreras sin sesión.');
