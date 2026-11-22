@@ -465,3 +465,7 @@ input[type=file]::file-selector-button{background:#F0ECFF;color:#4F39AE;border:1
  .ux-dialog-actions{flex-direction:column}
  .ux-work-current{align-items:flex-start}
 }
+
+
+/* Campo trampa antispam del formulario CU14: no interferir con teclado ni lectores. */
+.share-honeypot{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important}
