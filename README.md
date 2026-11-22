@@ -3,7 +3,7 @@
 Proyecto académico de **Ingeniería del Software 2 — Facultad de Ciencias y Tecnología**.
 
 ## Estado actual
-Aplicación web con inicio, consulta y filtrado de ofertas, registro e inicio de sesión y paneles por rol (estudiante, empresa, revisores y Secretaría Académica). Los 24 casos de uso están documentados en [REQUERIMIENTOS.md](./REQUERIMIENTOS.md), con indicación explícita de cuáles requieren pruebas o configuración adicional.
+Aplicación web con inicio, registro e inicio de sesión, consulta y filtrado de ofertas **solo para usuarios autenticados** y paneles por rol (estudiante, empresa, revisores y Secretaría Académica). Los 24 casos de uso están documentados en [REQUERIMIENTOS.md](./REQUERIMIENTOS.md), con indicación explícita de cuáles requieren pruebas o configuración adicional.
 
 ## Arquitectura
 - **Frontend:** HTML, CSS y JavaScript, sitio estático para Vercel (sin build). Diseño índigo tecnológico con navegación responsive.
@@ -63,3 +63,7 @@ Los controles básicos de presentación están en `tests/front-design.mjs`. Se e
 ## Publicación automática verificada
 
 Este repositorio está vinculado al proyecto de Vercel mediante **Settings → Git**. Los cambios publicados en la rama `main` deben generar un despliegue automáticamente. Esta anotación se incorporó para verificar el flujo GitHub → Vercel sin modificar la interfaz de la aplicación.
+
+## Consulta privada de ofertas
+
+El catálogo y el detalle de ofertas requieren una sesión válida, con usuario habilitado y perfil de rol activo. La portada y el registro de estudiantes continúan públicos. Se protegen las rutas `#ofertas`, las llamadas `offers` y `offer-detail` y se elimina el catálogo cargado al cerrar sesión. Las pruebas de seguridad están en `tests/smoke.mjs`, `tests/front-design.mjs` y `tests/e2e-student-once.mjs`.
