@@ -152,7 +152,7 @@ async function showOffer(id){
  modal.innerHTML='<div class="modal-body"><p>Cargando detalle...</p><button class="btn btn-secondary" data-close-offer>Cerrar</button></div>';
  if(!modal.open)modal.showModal();
  try{
-  const r=await request('offer-detail',{offer_id:Number(id)});
+  const r=await request('offer-detail',{offer_id:Number(id)},true);
   const o=r.offer;
   // Evitar ofrecer una segunda postulación antes de contactar al backend.
   let alreadyApplied=false;
