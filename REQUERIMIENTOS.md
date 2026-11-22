@@ -1,5 +1,7 @@
 # Estado de los requerimientos — TPF04, Grupo 05
 
+> **Actualización del 21/11/2026:** se corrigieron las incidencias del rol Alumno y Empresa verificadas en documentos de pruebas. Incluye catálogo de **9 carreras CyT**, experiencia laboral en curso, campos profesionales obligatorios, avisos/confirmaciones mejorados y consulta privada del perfil de postulantes por empresa. La nueva batería de pruebas E2E del alumno terminó **32/32 OK**. La recuperación por correo **sigue pendiente de configurar**. Consultar el [informe de correcciones de roles](./INFORME_CORRECCIONES_ROLES_2026-11-21.md) y la [ejecución de pruebas](https://github.com/chatgptgrupal2026-design/bolsa-laboral-universitaria/actions/runs/44967214205).
+
 Este seguimiento corresponde a los **24 casos de uso del TPF04** y al DER del TPF05. La base conserva las 18 tablas del modelo académico, además del esquema privado `simulacion_academica` para verificar estudiantes sin acceso al sistema universitario real.
 
 **Leyenda:** Código publicado = frontend y backend desplegados, pero no necesariamente probados de principio a fin. Operativo comprobado = se verificó la operación o su programación.
