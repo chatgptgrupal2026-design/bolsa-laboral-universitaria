@@ -154,13 +154,19 @@ async function showOffer(id){
  try{
   const r=await request('offer-detail',{offer_id:Number(id)});
   const o=r.offer;
+  // Evitar ofrecer una segunda postulación antes de contactar al backend.
+  let alreadyApplied=false;
+  if(o.verificada){
+   try{const apps=await request('student-applications',{},true);alreadyApplied=apps.items?.some(x=>Number(x.id_oferta)===Number(o.id_oferta))||false;}
+   catch{ /* La API sigue controlando duplicados, incluso si falla esta consulta. */ }
+  }
   const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Asuncion',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const expired=o.estado!=='Publicada'||(!o.vigencia_indefinida&&o.fecha_vencimiento&&o.fecha_vencimiento<today);
   modal.innerHTML='<div class="modal-body"><button class="close-dialog" data-close-offer aria-label="Cerrar">×</button><span class="eyebrow dark">'+H(o.tipo)+'</span><h2>'+H(o.titulo)+'</h2>'+
   rowHTML('Empresa',o.empresa)+rowHTML('Carreras',o.carreras.map(x=>x.nombre).join(', '))+
   rowHTML('Estado',o.estado)+(o.vigencia_indefinida?rowHTML('Vigencia','Indefinida'):rowHTML('Fecha de vencimiento',o.fecha_vencimiento))+
   '<h3>Descripción</h3><p class="preserve-lines">'+H(o.descripcion)+'</p><h3>Requisitos</h3><p class="preserve-lines">'+H(o.requisitos||'No especificados')+'</p>'+
-  (o.verificada?(expired?'<p class="alert">Esta oferta no admite postulaciones.</p>':'<button class="btn btn-primary" data-apply="'+o.id_oferta+'">Postularme</button>'):
+  (o.verificada?(expired?'<p class="alert">Esta oferta no admite postulaciones.</p>':alreadyApplied?'<div class="info-card">Ya te postulaste a esta oferta. Podés ver el estado en Mis postulaciones.</div>':'<button class="btn btn-primary" data-apply="'+o.id_oferta+'">Postularme</button>'):
   '<div class="info-card"><strong>Empresa no verificada</strong><p>Aprobada por: '+H(o.aprobada_por||'Instancia revisora')+'</p>'+o.medios.map(m=>{
     const val=String(m.valor||'');
     if(m.tipo==='Enlace' && /^https:\/\//i.test(val))return '<p><a href="'+H(val)+'" target="_blank" rel="noopener noreferrer">Abrir enlace externo de postulación</a></p>';
