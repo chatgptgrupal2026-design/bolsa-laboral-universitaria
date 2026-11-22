@@ -23,20 +23,16 @@ for(const name of ["Arquitectura","Diseño Gráfico","Diseño Industrial","Ingen
 }
 console.log("OK: CU01 catálogo de carreras.");
 
+// El listado y el detalle NO son públicos: ni siquiera la API debe devolverlos.
 const offers=await call("offers");
-assert.equal(offers.status,200,JSON.stringify(offers.body));
-assert.equal(offers.body.ok,true);
-assert.ok(Array.isArray(offers.body.items));
-const demo=offers.body.items.find(x=>x.titulo==="DEMO · Pasantía de Desarrollo de Software");
-assert.ok(demo,"No se publicó la oferta de prueba.");
-assert.ok(demo.carreras.some(x=>x.nombre==="Análisis de Sistemas"));
-console.log("OK: CU06 ofertas y filtro por carrera.");
+assert.equal(offers.status,401,JSON.stringify(offers.body));
+assert.equal(offers.body.ok,false);
+console.log("OK: el catálogo laboral está protegido contra usuarios anónimos.");
 
-const detail=await call("offer-detail",{offer_id:demo.id_oferta});
-assert.equal(detail.status,200,JSON.stringify(detail.body));
-assert.equal(detail.body.offer.verificada,true);
-assert.equal(detail.body.offer.tipo,"Pasantía");
-console.log("OK: CU07 detalle de oferta.");
+const detail=await call("offer-detail",{offer_id:1});
+assert.equal(detail.status,401,JSON.stringify(detail.body));
+assert.equal(detail.body.ok,false);
+console.log("OK: el detalle de las ofertas también exige sesión.");
 
 const badLogin=await call("login",{usuario:"cuenta_inexistente_2026",password:"no-valida"});
 assert.equal(badLogin.status,401,JSON.stringify(badLogin.body));
