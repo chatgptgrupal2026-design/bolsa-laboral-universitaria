@@ -47,3 +47,20 @@ assert.match(brand,/data:image\/png;base64,/);
 assert.match(theme,/\.career-option:has\(input:checked\)/);
 console.log('OK: casillas de carrera accesibles, logo UC y envío autenticado.');
 
+const student=readFileSync(new URL('../student.js',import.meta.url),'utf8');
+const backend=readFileSync(new URL('../supabase/functions/bolsa-api/index.ts',import.meta.url),'utf8');
+const feedback=readFileSync(new URL('../ux-feedback.js',import.meta.url),'utf8');
+assert.match(html,/src="\.\/ux-feedback\.js"/);
+assert.match(student,/item-actualmente_trabajo/);
+assert.match(student,/prof-disponibilidad" required/);
+assert.match(student,/window\.BolsaUI\.confirm/);
+assert.match(portal,/data-applicant-profile/);
+assert.match(portal,/company-applicant-profile/);
+assert.match(backend,/if\(action==="company-applicant-profile"\)/);
+assert.match(backend,/Completá habilidades y disponibilidad laboral/);
+assert.match(backend,/Solo podés retirar postulaciones mientras la oferta esté vigente/);
+assert.match(feedback,/window\.BolsaUI=\{notify,confirm:confirmAction\}/);
+assert.match(theme,/\.applicant-profile-details/);
+console.log('OK: incidencias estudiantiles y perfil privado de postulantes cubiertos por pruebas de código.');
+
+
