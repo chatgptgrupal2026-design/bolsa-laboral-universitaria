@@ -59,7 +59,7 @@ assert.match(portal,/company-applicant-profile/);
 assert.match(backend,/if\(action==="company-applicant-profile"\)/);
 assert.match(backend,/Completá habilidades y disponibilidad laboral/);
 assert.match(backend,/Solo podés retirar postulaciones mientras la oferta esté vigente/);
-assert.match(feedback,/window\.BolsaUI=\{notify,confirm:confirmAction\}/);
+assert.match(feedback,/window\.BolsaUI=\{notify,confirm:confirmAction,reason\}/);
 assert.match(theme,/\.applicant-profile-details/);
 console.log('OK: incidencias estudiantiles y perfil privado de postulantes cubiertos por pruebas de código.');
 
@@ -88,3 +88,17 @@ console.log('OK: CU14 puede recibir propuestas externas sin sesión y las oferta
 
 assert.ok(portal.includes("if(location.hash.replace(/^#/,'').split('/')[0]==='compartir')populateShareCareers()"));
 console.log('OK: el enlace directo a CU14 carga las carreras sin sesión.');
+
+assert.match(portal,/id:'historial',label:'Historial de ofertas'/);
+assert.match(portal,/function reviewList\(approved,historical=false\)/);
+assert.match(portal,/window\.BolsaUI\.reason/);
+assert.match(portal,/name="descripcion"/);
+assert.match(backend,/if\(action==="offer-attachment"\)/);
+assert.match(backend,/rpc\/actualizar_oferta_externa_aprobada/);
+assert.match(backend,/pending,approved,history/);
+assert.match(backend,/adjuntos:attachments/);
+assert.match(student,/offer-flyer-section/);
+assert.match(feedback,/function reason\(/);
+assert.match(theme,/\.review-audit/);
+assert.match(theme,/\.offer-flyer-image/);
+console.log('OK: historial, flyer privado, edición transaccional y datos completos de empresa.');
