@@ -153,6 +153,20 @@ async function studentForRequest(req) {
  if(!students.length)return null;
  return {user,student:students[0]};
 }
+// Sólo cuentas activas y con un perfil de rol vigente pueden consultar ofertas.
+async function canViewOffers(req){
+ const claims=await sessionFrom(req);
+ if(!claims)return false;
+ const user=(await db("usuario",{select:"id_usuario,tipo_usuario,habilitado",id_usuario:"eq."+claims.id,limit:1}))[0];
+ if(!user||!user.habilitado)return false;
+ if(user.tipo_usuario==="Estudiante")
+  return (await db("estudiante",{select:"id_estudiante",id_usuario:"eq."+user.id_usuario,limit:1})).length>0;
+ if(user.tipo_usuario==="Empresa verificada")
+  return (await db("empresa_verificada",{select:"id_empresa",id_usuario:"eq."+user.id_usuario,habilitada:"eq.true",limit:1})).length>0;
+ if(["Centro de Estudiantes","Secretaría Académica"].includes(user.tipo_usuario))
+  return (await db("revisor",{select:"id_revisor",id_usuario:"eq."+user.id_usuario,habilitado:"eq.true",instancia:"eq."+user.tipo_usuario,limit:1})).length>0;
+ return false;
+}
 function safeField(v,len=250) {return String(v??"").trim().slice(0,len);}
 function numberId(v) { const n=Number(v);return Number.isSafeInteger(n) && n>0?n:null; }
 const itemTables={
@@ -175,6 +189,7 @@ Deno.serve(async req => {
   return response({ok:true,items});
  }
  if(action==="offers"){
+  if(!(await canViewOffers(req)))return fail("Iniciá sesión con una cuenta habilitada para consultar las ofertas laborales.",401);
   const items=await db("oferta_laboral",{select:"id_oferta,titulo,tipo,descripcion,requisitos,estado,origen,fecha_publicacion,fecha_vencimiento,vigencia_indefinida",estado:"in.(Publicada,Vencida)",order:"fecha_publicacion.desc",limit:50});
   if(items.length){
    const links=await db("oferta_carrera",{select:"id_oferta,id_carrera,carrera(nombre)",id_oferta:"in.("+items.map(o=>o.id_oferta).join(",")+")"});
@@ -234,6 +249,7 @@ Deno.serve(async req => {
 
 
  if(action==="offer-detail"){
+  if(!(await canViewOffers(req)))return fail("Iniciá sesión con una cuenta habilitada para consultar las ofertas laborales.",401);
   const id=numberId(input.offer_id);if(!id)return fail("Oferta inválida.");
   const offers=await db("oferta_laboral",{select:"*",id_oferta:"eq."+id,estado:"in.(Publicada,Vencida)",limit:1});
   const offer=offers[0];if(!offer)return fail("Oferta no disponible.",404);
