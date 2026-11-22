@@ -75,3 +75,7 @@ assert.ok([200,503].includes(recovery.status),"La recuperación respondió inesp
 console.log(recovery.status===503
  ? "PENDIENTE: recuperación por correo sin servicio de envío (HTTP 503)."
  : "OK: solicitud de recuperación recibida por el servicio de correo.");
+
+const anonymousFlyer=await call("offer-attachment",{offer_id:24,attachment_id:7});
+assert.equal(anonymousFlyer.status,401,JSON.stringify(anonymousFlyer.body));
+console.log("OK: flyer de oferta publicada exige sesión habilitada.");
