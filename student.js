@@ -160,12 +160,28 @@ async function showOffer(id){
    try{const apps=await request('student-applications',{},true);alreadyApplied=apps.items?.some(x=>Number(x.id_oferta)===Number(o.id_oferta))||false;}
    catch{ /* La API sigue controlando duplicados, incluso si falla esta consulta. */ }
   }
+  // Los flyers se obtienen con URLs temporales firmadas, sin hacer público el bucket.
+  let flyerHtml='';
+  if(!o.verificada&&(o.adjuntos||[]).length){
+   const entries=await Promise.all(o.adjuntos.map(async a=>{
+    try{
+     const res=await request('offer-attachment',{offer_id:Number(o.id_oferta),attachment_id:Number(a.id_adjunto)},true);
+     if(!/^https:\/\//.test(res.url))throw new Error('Enlace no seguro');
+     const uri=H(res.url),label=H(a.nombre_archivo||'Flyer de la oferta');
+     return '<div class="offer-flyer-item">'+
+       (String(a.formato||'').startsWith('image/')?'<a href="'+uri+'" target="_blank" rel="noopener noreferrer"><img class="offer-flyer-image" src="'+uri+'" alt="Flyer: '+label+'" loading="lazy" /></a>':'')+
+       '<a class="btn btn-secondary" target="_blank" rel="noopener noreferrer" href="'+uri+'">Abrir '+label+'</a></div>';
+    }catch(err){return '<p class="muted">No se pudo cargar el adjunto '+H(a.nombre_archivo)+'.</p>';}
+   }));
+   flyerHtml='<section class="offer-flyer-section"><h3>Flyer y archivos adjuntos</h3>'+entries.join('')+'</section>';
+  }
   const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Asuncion',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const expired=o.estado!=='Publicada'||(!o.vigencia_indefinida&&o.fecha_vencimiento&&o.fecha_vencimiento<today);
   modal.innerHTML='<div class="modal-body"><button class="close-dialog" data-close-offer aria-label="Cerrar">×</button><span class="eyebrow dark">'+H(o.tipo)+'</span><h2>'+H(o.titulo)+'</h2>'+
   rowHTML('Empresa',o.empresa)+rowHTML('Carreras',o.carreras.map(x=>x.nombre).join(', '))+
   rowHTML('Estado',o.estado)+(o.vigencia_indefinida?rowHTML('Vigencia','Indefinida'):rowHTML('Fecha de vencimiento',o.fecha_vencimiento))+
   '<h3>Descripción</h3><p class="preserve-lines">'+H(o.descripcion)+'</p><h3>Requisitos</h3><p class="preserve-lines">'+H(o.requisitos||'No especificados')+'</p>'+
+  flyerHtml+
   (o.verificada?(expired?'<p class="alert">Esta oferta no admite postulaciones.</p>':alreadyApplied?'<div class="info-card">Ya te postulaste a esta oferta. Podés ver el estado en Mis postulaciones.</div>':'<button class="btn btn-primary" data-apply="'+o.id_oferta+'">Postularme</button>'):
   '<div class="info-card"><strong>Empresa no verificada</strong><p>Aprobada por: '+H(o.aprobada_por||'Instancia revisora')+'</p>'+o.medios.map(m=>{
     const val=String(m.valor||'');
