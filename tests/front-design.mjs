@@ -64,3 +64,14 @@ assert.match(theme,/\.applicant-profile-details/);
 console.log('OK: incidencias estudiantiles y perfil privado de postulantes cubiertos por pruebas de código.');
 
 
+
+const api=readFileSync(new URL('../supabase/functions/bolsa-api/index.ts',import.meta.url),'utf8');
+assert.match(api,/if\(action==="offers"\)\{\s*if\(!\(await canViewOffers\(req\)\)\)/);
+assert.match(api,/if\(action==="offer-detail"\)\{\s*if\(!\(await canViewOffers\(req\)\)\)/);
+assert.match(app,/if\(to==='ofertas' && !getToken\(\)\)/);
+assert.match(app,/request\('offers',\{\},true\)/);
+assert.match(html,/data-nav="ofertas" class="nav-link hidden"/);
+assert.match(html,/id="hero-offers-cta" data-nav="login"/);
+assert.match(portal,/request\('offer-detail',\{offer_id:Number\(edit\.dataset\.editOffer\)\},true\)/);
+assert.match(student,/request\('offer-detail',\{offer_id:Number\(id\)\},true\)/);
+console.log('OK: listado, detalle y navegación de ofertas protegidos para invitados.');
