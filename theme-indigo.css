@@ -469,3 +469,25 @@ input[type=file]::file-selector-button{background:#F0ECFF;color:#4F39AE;border:1
 
 /* Campo trampa antispam del formulario CU14: no interferir con teclado ni lectores. */
 .share-honeypot{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important}
+
+
+/* Auditoría de Secretaría y Empresa — historial, flyers y avisos */
+.admin-company-description{margin:9px 0 0;color:#655d82;line-height:1.6;font-size:12px;white-space:pre-line;overflow-wrap:anywhere}
+.review-audit{margin:18px 0;padding:16px 18px;background:#f3f0ff;border:1px solid #ddd4fb;border-radius:12px}
+.review-audit h4{margin:0 0 10px;color:#5842a3}
+.review-audit p{margin:8px 0;color:#554e78;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.ux-reason-label{width:100%;text-align:left;color:#493d83;font-weight:750;font-size:13px;margin-top:5px}
+.ux-reason-input{display:block;width:100%;min-height:116px;resize:vertical;padding:13px 14px;border:1px solid #bcb0e7;border-radius:10px;font:inherit;font-size:14px;line-height:1.5;color:#29215b;background:#fff}
+.ux-reason-input:focus{outline:3px solid #bcb0e777;border-color:#7058cb}
+.ux-reason-error{width:100%;text-align:left;color:#b22f46;font-size:12px}
+.offer-flyer-section{margin:20px 0;padding:18px;background:#f7f4ff;border:1px solid #e3dcf8;border-radius:14px}
+.offer-flyer-section h3{margin:0 0 13px;color:#43358e}
+.offer-flyer-item{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.offer-flyer-item+.offer-flyer-item{margin-top:20px}
+.offer-flyer-image{display:block;width:100%;max-width:540px;max-height:720px;object-fit:contain;object-position:left top;border:1px solid #e2dcf0;border-radius:12px;background:#fff}
+.offer-flyer-item .btn{max-width:100%;overflow-wrap:anywhere;white-space:normal;text-align:center}
+@media(max-width:520px){
+ .review-audit{padding:13px 12px}
+ .offer-flyer-section{padding:13px}
+ .ux-reason-input{font-size:16px}
+}
