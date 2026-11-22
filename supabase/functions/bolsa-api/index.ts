@@ -198,7 +198,7 @@ Deno.serve(async req => {
     "POST"
   );
   const academic=academicRows[0];
-  if(!academic) return fail("La matrícula y la cédula no coinciden con el registro académico simulado.");
+  if(!academic) return fail("La matrícula o la cédula no coinciden con el registro académico.");
   const dup=await db("usuario",{select:"id_usuario",or:"(nombre_usuario.eq."+matricula+",correo.eq."+correo+")",limit:1});
   if(dup.length) return fail("Ya existe una cuenta registrada con esa matrícula o correo.",409);
   const carreras=await db("carrera",{select:"id_carrera",nombre:"eq."+academic.carrera,limit:1});
@@ -371,6 +371,34 @@ Deno.serve(async req => {
    people.push({id_postulacion:a.id_postulacion,id_estudiante:a.id_estudiante,estado:a.estado,fecha_postulacion:a.fecha_postulacion,nombre:student?.nombre||"",apellido:student?.apellido||"",matricula:student?.matricula||"",cv:cv?.nombre_archivo||null,perfil:prof||null});
   }
   return response({ok:true,title:own[0].titulo,applicants:people});
+ }
+ if(action==="company-applicant-profile"){
+  const actor=await actorFor(req,["Empresa verificada"]);if(!actor)return fail("Acceso de empresa requerido.",401);
+  const applicationId=numberId(input.application_id);if(!applicationId)return fail("Postulación inválida.");
+  const application=(await db("postulacion",{select:"id_estudiante,id_oferta,estado,fecha_postulacion",id_postulacion:"eq."+applicationId,limit:1}))[0];
+  if(!application)return fail("La postulación no existe.",404);
+  const own=await db("oferta_laboral",{select:"id_oferta,titulo",id_oferta:"eq."+application.id_oferta,id_empresa:"eq."+actor.company.id_empresa,limit:1});
+  if(!own.length)return fail("No tenés permiso para consultar este perfil.",403);
+  const student=(await db("estudiante",{select:"nombre,apellido,matricula,id_carrera,semestre_actual",id_estudiante:"eq."+application.id_estudiante,limit:1}))[0];
+  if(!student)return fail("No se encontró el estudiante.",404);
+  const [career,professional,cv]=await Promise.all([
+   db("carrera",{select:"nombre",id_carrera:"eq."+student.id_carrera,limit:1}),
+   db("perfil_profesional",{select:"id_perfil,habilidades,tecnologias,disponibilidad_laboral",id_estudiante:"eq."+application.id_estudiante,limit:1}),
+   db("curriculum_vitae",{select:"nombre_archivo,fecha_carga",id_estudiante:"eq."+application.id_estudiante,limit:1})
+  ]);
+  let experiences=[],languages=[],trainings=[];
+  if(professional[0]){
+   const id=professional[0].id_perfil;
+   [experiences,languages,trainings]=await Promise.all([
+    db("experiencia_laboral",{select:"empresa,cargo,fecha_inicio,fecha_fin",id_perfil:"eq."+id,order:"fecha_inicio.desc"}),
+    db("idioma",{select:"nombre,nivel",id_perfil:"eq."+id}),
+    db("capacitacion",{select:"tipo,nombre,institucion,anio",id_perfil:"eq."+id})
+   ]);
+  }
+  return response({ok:true,application_id:applicationId,offer_title:own[0].titulo,
+   student:{nombre:student.nombre,apellido:student.apellido,matricula:student.matricula,carrera:career[0]?.nombre||"",semestre_actual:student.semestre_actual},
+   professional:professional[0]?{habilidades:professional[0].habilidades,tecnologias:professional[0].tecnologias,disponibilidad_laboral:professional[0].disponibilidad_laboral}:null,
+   experiences,languages,trainings,cv:cv[0]?.nombre_archivo||null});
  }
  if(action==="company-applicant-cv"){
   const actor=await actorFor(req,["Empresa verificada"]);if(!actor)return fail("Acceso de empresa requerido.",401);
@@ -553,6 +581,7 @@ Deno.serve(async req => {
  if(action==="student-professional-save"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const data={habilidades:safeField(input.habilidades,1500)||null,tecnologias:safeField(input.tecnologias,1500)||null,disponibilidad_laboral:safeField(input.disponibilidad_laboral,100)||null};
+  if(!data.habilidades||!data.disponibilidad_laboral)return fail("Completá habilidades y disponibilidad laboral antes de guardar.");
   const found=await db("perfil_profesional",{select:"id_perfil",id_estudiante:"eq."+auth.student.id_estudiante,limit:1});
   if(found.length)await db("perfil_profesional",{id_perfil:"eq."+found[0].id_perfil},data,"PATCH");
   else await db("perfil_profesional",{},[{id_estudiante:auth.student.id_estudiante,...data}],"POST");
@@ -590,7 +619,11 @@ Deno.serve(async req => {
   }
   if(item===itemTables.experiencia){
    if(!data.empresa||!data.cargo)return fail("Ingresá la empresa y el cargo.");
-   if(data.fecha_inicio&&data.fecha_fin&&data.fecha_fin<data.fecha_inicio)return fail("La fecha final no puede ser anterior a la inicial.");
+   const ongoing=input.actualmente_trabajo===true||input.actualmente_trabajo==="on"||input.actualmente_trabajo==="true";
+   if(ongoing)data.fecha_fin=null;
+   if(!data.fecha_inicio||!/^\d{4}-\d{2}-\d{2}$/.test(data.fecha_inicio)||Number.isNaN(Date.parse(data.fecha_inicio+"T12:00:00Z")))return fail("Ingresá una fecha de inicio válida.");
+   if(data.fecha_fin&&(!/^\d{4}-\d{2}-\d{2}$/.test(data.fecha_fin)||Number.isNaN(Date.parse(data.fecha_fin+"T12:00:00Z"))))return fail("La fecha de finalización no es válida.");
+   if(data.fecha_fin&&data.fecha_fin<data.fecha_inicio)return fail("La fecha final no puede ser anterior a la inicial.");
   }
   if(item===itemTables.idioma&&(!data.nombre||!data.nivel))return fail("Completá el idioma y nivel.");
   if(item===itemTables.capacitacion&&(!data.nombre||!data.tipo))return fail("Completá el tipo y nombre de la capacitación.");
