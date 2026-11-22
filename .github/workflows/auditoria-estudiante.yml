@@ -1,10 +1,8 @@
 name: Auditoría funcional — estudiante (ejecución controlada)
 
+# Pruebas con datos simulados que se deben preparar y limpiar de forma controlada.
+# El CI de seguridad público continúa ejecutándose en cada push en pruebas.yml.
 on:
-  push:
-    paths:
-      - 'tests/e2e-student-once.mjs'
-      - '.github/workflows/auditoria-estudiante.yml'
   workflow_dispatch:
 
 permissions:
