@@ -3,7 +3,7 @@
 'use strict';
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const root=()=>document.getElementById('portal-area');
-let role='',tab='',view=null,careers=[],editingOffer=null,reviewOffer=null,selectedApplicants=null;
+let role='',tab='',view=null,careers=[],editingOffer=null,reviewOffer=null,selectedApplicants=null,selectedProfile=null;
 const isCompany=()=>role==='Empresa verificada';
 const isSecretary=()=>role==='Secretaría Académica';
 const isReviewer=()=>['Centro de Estudiantes','Secretaría Académica'].includes(role);
@@ -11,6 +11,7 @@ const option=(id,name,chosen)=>'<option value="'+E(id)+'" '+(chosen?'selected':'
 const input=(name,label,value='',type='text',required=false)=>'<div class="field"><label for="portal-'+name+'">'+E(label)+'</label><input id="portal-'+name+'" name="'+name+'" value="'+E(value)+'" type="'+type+'" '+(required?'required':'')+' /></div>';
 const area=()=>document.getElementById('portal-content');
 function message(text,error=false){
+ window.BolsaUI?.notify(text,error?'error':'success');
  const m=document.getElementById('portal-message');
  if(m){m.className='alert'+(error?'':' success');m.textContent=text;m.scrollIntoView({block:'nearest',behavior:'smooth'});}
 }
@@ -182,11 +183,29 @@ function offers(){
  if(selectedApplicants)html+=applicantsHtml();
  return html;
 }
+function applicantProfileHtml(p){
+ if(!p)return '';
+ const st=p.student||{},pro=p.professional||{};
+ const list=(items,render)=>items?.length?'<div class="applicant-profile-list">'+items.map(render).join('')+'</div>':'<p class="muted">No informado.</p>';
+ return '<section class="applicant-profile-details" aria-label="Perfil profesional del postulante">'+
+ '<div class="applicant-profile-heading"><div><span class="dashboard-card-kicker">PERFIL DEL POSTULANTE</span><h3>'+E(st.nombre)+' '+E(st.apellido)+'</h3><p>'+E(st.matricula)+' · '+E(st.carrera||'Carrera no informada')+(st.semestre_actual?' · Semestre '+E(st.semestre_actual):'')+'</p></div><button class="btn btn-secondary" type="button" data-close-applicant-profile>Cerrar perfil</button></div>'+
+ '<div class="applicant-profile-grid"><div><h4>Habilidades</h4><p class="preserve-lines">'+E(pro.habilidades||'No informado')+'</p></div>'+
+ '<div><h4>Tecnologías</h4><p class="preserve-lines">'+E(pro.tecnologias||'No informado')+'</p></div>'+
+ '<div><h4>Disponibilidad laboral</h4><p>'+E(pro.disponibilidad_laboral||'No informado')+'</p></div>'+
+ '<div><h4>Currículum</h4>'+(p.cv?'<button class="btn btn-secondary" type="button" data-applicant-cv="'+E(p.application_id)+'">Descargar '+E(p.cv)+'</button>':'<p class="muted">No tiene CV cargado.</p>')+'</div></div>'+
+ '<h4>Experiencia laboral</h4>'+list(p.experiences,x=>'<article><strong>'+E(x.cargo||'Cargo')+' · '+E(x.empresa||'Empresa')+'</strong><small>'+E(x.fecha_inicio||'Sin fecha')+' — '+E(x.fecha_fin||'Actualmente')+'</small></article>')+
+ '<h4>Idiomas</h4>'+list(p.languages,x=>'<article><strong>'+E(x.nombre||'Idioma')+'</strong><small>'+E(x.nivel||'Sin nivel')+'</small></article>')+
+ '<h4>Cursos y certificaciones</h4>'+list(p.trainings,x=>'<article><strong>'+E(x.nombre||'Formación')+'</strong><small>'+E(x.tipo||'')+(x.institucion?' · '+E(x.institucion):'')+(x.anio?' · '+E(x.anio):'')+'</small></article>')+
+ '</section>';
+}
 function applicantsHtml(){
- const a=selectedApplicants;return '<div class="student-collection"><h3>Postulantes: '+E(a.title)+'</h3>'+
+ const a=selectedApplicants;
+ return '<section class="student-collection"><h3>Postulantes: '+E(a.title)+'</h3>'+
  (a.applicants?.length?'<div class="compact-list">'+a.applicants.map(p=>
-  '<div class="compact-item"><div><strong>'+E(p.nombre)+' '+E(p.apellido)+'</strong><small>'+E(p.matricula)+' · '+E(p.estado)+' · '+new Date(p.fecha_postulacion).toLocaleDateString('es-PY')+'</small><small>Habilidades: '+E(p.perfil?.habilidades||'Sin cargar')+'</small></div>'+
-  (p.cv?'<button class="btn btn-secondary" data-applicant-cv="'+p.id_postulacion+'">Ver CV</button>':'<span class="muted">Sin CV</span>')+'</div>').join('')+'</div>':'<div class="status-message">Esta oferta aún no tiene postulantes.</div>')+'</div>';
+  '<article class="compact-item"><div><strong>'+E(p.nombre)+' '+E(p.apellido)+'</strong><small>'+E(p.matricula)+' · '+E(p.estado)+' · '+new Date(p.fecha_postulacion).toLocaleDateString('es-PY')+'</small><small>Habilidades: '+E(p.perfil?.habilidades||'Sin cargar')+'</small></div>'+
+  '<div class="compact-actions"><button type="button" class="btn btn-primary" data-applicant-profile="'+p.id_postulacion+'">Ver perfil</button>'+
+  (p.cv?'<button type="button" class="btn btn-secondary" data-applicant-cv="'+p.id_postulacion+'">Ver CV</button>':'<span class="muted">Sin CV</span>')+'</div></article>').join('')+'</div>':'<div class="status-message">Esta oferta aún no tiene postulantes.</div>')+
+ applicantProfileHtml(selectedProfile)+'</section>';
 }
 function reviewList(approved){
  const items=approved?view.approved:view.pending;
@@ -284,9 +303,17 @@ document.addEventListener('click',async e=>{
  }
  const apps=e.target.closest('[data-view-applicants]');
  if(apps){
-  try{selectedApplicants=await request('company-applicants',{offer_id:Number(apps.dataset.viewApplicants)},true);render();}
+  try{selectedApplicants=await request('company-applicants',{offer_id:Number(apps.dataset.viewApplicants)},true);selectedProfile=null;render();}
   catch(err){message(err.message,true);}return;
  }
+ const profile=e.target.closest('[data-applicant-profile]');
+ if(profile){
+  try{selectedProfile=await request('company-applicant-profile',{application_id:Number(profile.dataset.applicantProfile)},true);render();}
+  catch(err){message(err.message,true);}
+  return;
+ }
+ const closeProfile=e.target.closest('[data-close-applicant-profile]');
+ if(closeProfile){selectedProfile=null;render();return;}
  const cv=e.target.closest('[data-applicant-cv]');
  if(cv){const pop=window.open('about:blank','_blank');try{const r=await request('company-applicant-cv',{application_id:Number(cv.dataset.applicantCv)},true);if(pop)pop.location.href=r.url;else message('Enlace del CV (copiar y abrir): '+r.url);}catch(err){pop?.close();message(err.message,true);}return;}
  const review=e.target.closest('[data-review-detail]');
