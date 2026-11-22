@@ -342,9 +342,10 @@ document.addEventListener('submit',async e=>{
  if(f.id==='share-offer-form'){
   e.preventDefault();
   const alert=document.getElementById('share-alert');
-  // Los permisos se vuelven a comprobar en Supabase antes de guardar.
+  // CU14: se puede remitir sin sesión; si inició sesión un estudiante,
+  // usamos la navegación de su perfil en lugar de presentar el formulario externo.
   if(!canShareOffer()){
-   alert.textContent='No tenés permiso para compartir ofertas. Iniciá sesión con una cuenta autorizada.';
+   alert.textContent='Esta sección es para empresas externas y usuarios de empresa autorizados.';
    alert.className='alert';
    navigate(getToken()?'perfil/inicio':'login');
    return;
