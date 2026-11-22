@@ -88,6 +88,14 @@ await check('CU03','Guardar y leer perfil académico',async()=>{
  assert.equal(r.student.cedula,first.cedula);
  assert.equal(r.student.semestre_actual,5);
 });
+await check('CU03','Seleccionar otra carrera de CyT',async()=>{
+ requireToken(token1);
+ expect(await call('student-academic-save',{correo:email1,id_carrera:2,semestre_actual:5},token1),200,'Seleccionar Ingeniería Civil');
+ const d=expect(await call('student-dashboard',{},token1),200,'Consultar carrera seleccionada');
+ assert.equal(d.student.id_carrera,2);
+ assert.ok(d.carreras.length>=9);
+ expect(await call('student-academic-save',{correo:email1,id_carrera:1,semestre_actual:5},token1),200,'Restaurar Análisis de Sistemas');
+});
 await check('CU03','Rechazar correo inválido',async()=>{
  requireToken(token1);
  expect(await call('student-academic-save',{correo:'correo-invalido',id_carrera:1},token1),400,'Correo inválido');
@@ -97,6 +105,10 @@ await check('CU04','Guardar habilidades, tecnologías y disponibilidad',async()=
  expect(await call('student-professional-save',{habilidades:'Trabajo en equipo',tecnologias:'JavaScript, Oracle',disponibilidad_laboral:'Medio tiempo'},token1),200,'Perfil profesional');
  const r=expect(await call('student-dashboard',{},token1),200,'Leer perfil profesional');
  assert.match(r.professional.habilidades,/Trabajo en equipo/);
+});
+await check('CU04','Rechazar perfil profesional incompleto',async()=>{
+ requireToken(token1);
+ expect(await call('student-professional-save',{habilidades:'',tecnologias:'JavaScript',disponibilidad_laboral:''},token1),400,'Campos obligatorios de perfil profesional');
 });
 await check('CU04','Agregar experiencia, idioma y capacitación',async()=>{
  requireToken(token1);
@@ -108,6 +120,15 @@ await check('CU04','Agregar experiencia, idioma y capacitación',async()=>{
  for(const item of items)expect(await call('student-item-save',item,token1),200,'Agregar '+item.item_type);
  const d=expect(await call('student-dashboard',{},token1),200,'Leer listas');
  assert.equal(d.experiencias.length,1);assert.equal(d.idiomas.length,1);assert.equal(d.capacitaciones.length,1);
+});
+await check('CU04','Guardar experiencia de empleo actual',async()=>{
+ requireToken(token1);
+ const d=expect(await call('student-dashboard',{},token1),200,'Leer perfil antes de experiencia actual');
+ const id=d.experiencias[0]?.id_experiencia;
+ assert.ok(id,'Experiencia existente');
+ expect(await call('student-item-save',{item_type:'experiencia',item_id:id,empresa:'Empresa Ficticia QA',cargo:'Practicante',fecha_inicio:'2025-01-01',fecha_fin:'2025-12-31',actualmente_trabajo:true},token1),200,'Guardar experiencia actual');
+ const after=expect(await call('student-dashboard',{},token1),200,'Ver experiencia actual');
+ assert.equal(after.experiencias[0].fecha_fin,null);
 });
 await check('CU04','Editar y eliminar registros profesionales',async()=>{
  requireToken(token1);
@@ -185,6 +206,10 @@ await check('CU20','Retirar postulación y prohibir re-postulación',async()=>{
  assert.equal(d.items.find(a=>a.id_postulacion===applicationId)?.estado,'Retirada');
  expect(await call('student-apply',{offer_id:offerId},token1),409,'No volver a postular');
 });
+await check('CU19','Rechazar contraseña actual equivocada',async()=>{
+ requireToken(token1);
+ expect(await call('password-change',{current_password:'incorrecta',new_password:'NuevaSegura1234'},token1),401,'No cambia sin contraseña actual');
+});
 await check('CU19','Cambiar contraseña y verificar nuevo inicio',async()=>{
  requireToken(token1);
  expect(await call('password-change',{current_password:pass1,new_password:newPass},token1),200,'Cambiar contraseña');
@@ -194,6 +219,11 @@ await check('CU19','Cambiar contraseña y verificar nuevo inicio',async()=>{
 });
 await check('CU18','Rechazar token de recuperación inválido',async()=>{
  expect(await call('password-reset-complete',{token:'no-es-valido',password:'test-Password-2026'}),400,'Token inválido');
+});
+await check('RF026','Proteger perfil de postulante frente a alumno',async()=>{
+ requireToken(token1);
+ const d=await call('company-applicant-profile',{application_id:applicationId},token1);
+ assert.ok([401,403].includes(d.status),'Perfil privado respondió '+d.status);
 });
 await check('Permisos','Bloquear acciones privilegiadas al estudiante',async()=>{
  requireToken(token1);
