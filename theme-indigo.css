@@ -417,3 +417,51 @@ input[type=file]::file-selector-button{background:#F0ECFF;color:#4F39AE;border:1
  .footer-brand-uc{align-items:flex-start}
  .footer-brand-uc img{width:36px;height:36px}
 }
+
+
+/* Mejoras de experiencia — resultado de pruebas de roles del Grupo 05 */
+.ux-work-current{display:flex;align-items:center;gap:11px;padding:12px 16px;border:1px solid #DCD5F6;border-radius:12px;background:#F8F6FF;color:#37305E;font-size:13px;font-weight:700;cursor:pointer;margin:12px 0 4px}
+.ux-work-current input{width:19px;height:19px;accent-color:#6D28D9;flex:none}
+.ux-work-current:has(input:checked){border-color:#9A83E6;background:#F0EBFF}
+.ux-form-help{margin:0 0 18px;font-size:12px;color:#746C91}
+.ux-dialog{position:fixed;inset:0;margin:auto;max-width:min(430px,calc(100% - 30px));width:100%;border:1px solid #E9E4F7;border-radius:21px;padding:0;color:#302859;background:#FFFFFF;box-shadow:0 28px 80px rgba(21,14,76,.32)}
+.ux-dialog::backdrop{background:rgba(26,20,73,.6);backdrop-filter:blur(4px)}
+.ux-dialog-content{padding:32px 30px;display:flex;flex-direction:column;align-items:center;gap:13px;text-align:center}
+.ux-dialog-emblem{display:grid;place-items:center;width:54px;height:54px;background:#EFEAFF;border:1px solid #DAD0FB;color:#5F43B7;border-radius:50%;font-size:28px;font-weight:800}
+.ux-dialog h2{font-size:22px;margin:0;color:#29215F}
+.ux-dialog-copy{margin:0;color:#77718D;line-height:1.7}
+.ux-dialog-actions{display:flex;gap:10px;width:100%;margin-top:9px}
+.ux-dialog-actions .btn{flex:1 1 0;min-width:0}
+.ux-danger-action{background:#AC364A;color:#fff;box-shadow:none}
+.ux-danger-action:hover{background:#94263D;color:#fff}
+.ux-toast{z-index:250;display:flex;gap:13px;align-items:center;bottom:24px;right:24px;max-width:min(470px,calc(100% - 28px));border:1px solid #DCD4FB;border-left:4px solid #6D28D9;border-radius:14px;background:#fff;color:#30215D;box-shadow:0 16px 46px rgba(31,24,98,.19);padding:15px 16px;line-height:1.5;font-size:13px}
+.ux-toast-success{border-left-color:#6D28D9}
+.ux-toast-error{border-left-color:#C13A50;background:#FFF7F8}
+.ux-toast-symbol{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:50%;background:#ECE6FF;color:#5B42AD;font-size:16px;font-weight:900}
+.ux-toast-error .ux-toast-symbol{background:#FFE4E8;color:#A72D45}
+.ux-toast-text{min-width:0;flex:1}
+.ux-toast-close{flex:none;border:0;background:transparent;color:#716989;font-size:24px;line-height:1;cursor:pointer;min-width:30px;min-height:34px}
+.applicant-profile-details{background:#F9F8FF;border:1px solid #DDD6F5;border-radius:16px;padding:25px;margin-top:24px;scroll-margin-top:130px}
+.applicant-profile-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:1px solid #E5E1F1;padding-bottom:19px;margin-bottom:20px}
+.applicant-profile-heading h3{margin:3px 0 5px;color:#2E286E;font-size:20px}
+.applicant-profile-heading p{margin:0;color:#74708C;font-size:12px}
+.applicant-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin:10px 0 23px}
+.applicant-profile-grid>div{background:#fff;border:1px solid #E8E4F4;border-radius:12px;padding:14px 16px;min-width:0}
+.applicant-profile-details h4{font-size:13px;color:#5442A3;margin:18px 0 8px}
+.applicant-profile-grid h4{margin:0 0 6px}
+.applicant-profile-grid p{margin:0;color:#49436B;overflow-wrap:anywhere}
+.applicant-profile-list{display:grid;gap:8px}
+.applicant-profile-list article{background:#fff;border:1px solid #E8E4F4;border-radius:11px;padding:12px 16px}
+.applicant-profile-list strong{display:block;color:#322B68;font-size:13px}
+.applicant-profile-list small{display:block;margin-top:3px;color:#827D9A;font-size:12px}
+@media(max-width:700px){
+ .applicant-profile-heading{flex-direction:column}
+ .applicant-profile-grid{grid-template-columns:1fr}
+ .applicant-profile-details{padding:20px 16px}
+ .ux-dialog-content{padding:26px 20px}
+ .ux-toast{bottom:12px;right:12px;left:12px;max-width:none}
+}
+@media(max-width:360px){
+ .ux-dialog-actions{flex-direction:column}
+ .ux-work-current{align-items:flex-start}
+}
