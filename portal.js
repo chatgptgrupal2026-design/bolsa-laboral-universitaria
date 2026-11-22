@@ -406,5 +406,7 @@ document.addEventListener('submit',async e=>{
  }
 });
 window.BolsaPortal={open,select,clear,populateShareCareers};
-// La navegación principal verifica el rol antes de abrir Compartir oferta.
+// En una URL directa (#compartir), app.js procesa la ruta antes de que portal.js
+// termine de cargar. Rellenar las carreras también en esa primera visita.
+if(location.hash.replace(/^#/,'').split('/')[0]==='compartir')populateShareCareers();
 })();
