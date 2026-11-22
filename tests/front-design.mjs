@@ -14,7 +14,7 @@ assert.match(html,/aria-controls="main-navigation"/);
 assert.match(html,/id="main-navigation"/);
 assert.match(html,/id="student-area"/);
 assert.match(html,/id="portal-area"/);
-assert.match(html,/nav-link hidden">Compartir oferta/);
+assert.match(html,/nav-link">Compartir oferta/);
 console.log('OK: estructura, scripts, paneles y enlaces del tema.');
 
 for(const bp of [1180,920,800,700,520,360]){
