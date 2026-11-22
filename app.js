@@ -4,7 +4,7 @@ const state = {screen: 'inicio', offers: [], profile: null, token: ''};
 const $ = (selector) => document.querySelector(selector);
 const screens = new Set(['inicio', 'ofertas', 'registro', 'login', 'perfil', 'compartir', 'recuperar', 'restablecer']);
 const ROLES_PUEDEN_COMPARTIR = ['Empresa verificada','Secretaría Académica'];
-const canShareOffer = () => Boolean(getToken() && ROLES_PUEDEN_COMPARTIR.includes(state.profile?.tipo));
+const canShareOffer = () => !getToken() || ROLES_PUEDEN_COMPARTIR.includes(state.profile?.tipo);
 const getToken = () => sessionStorage.getItem('bolsa-token') || localStorage.getItem('bolsa-token') || '';
 function clean(text) {return String(text ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function setAlert(id, message, success = false){const el = $(id);el.textContent = message;el.className = 'alert' + (success ? ' success' : '');}
@@ -42,7 +42,7 @@ function navigate(target,fromHistory=false){
  // La portada y el registro son públicos; el catálogo requiere una cuenta.
  if(to==='ofertas' && !getToken()){to='login';section='inicio';}
  if(getToken() && ['registro','login','recuperar','restablecer'].includes(to)){to='perfil';section='inicio';}
- // No permitir la página de carga a invitados ni estudiantes, incluso con URL directa.
+ // CU14: las empresas sin cuenta sí pueden compartir ofertas; los estudiantes autenticados no usan ese formulario.
  if(to==='compartir' && !canShareOffer()){
   if(!getToken()){to='login';}
   else if(!state.profile){
@@ -78,7 +78,7 @@ function updateHeader(){
  nav.dataset.nav=loggedIn?'perfil':'login';
  // Ocultar todos los accesos a Registrarse/Crear cuenta mientras haya sesión.
  for(const btn of document.querySelectorAll('[data-nav="registro"]')) btn.classList.toggle('hidden',loggedIn);
- // Navegación privada: no revelar el catálogo ni el envío de ofertas a invitados.
+ // El catálogo sigue siendo privado; el envío externo CU14 es público.
  const offerAccess=loggedIn&&Boolean(state.profile?.tipo);
  for(const btn of document.querySelectorAll('.nav [data-nav="ofertas"]'))btn.classList.toggle('hidden',!offerAccess);
  const heroCta=$('#hero-offers-cta');
