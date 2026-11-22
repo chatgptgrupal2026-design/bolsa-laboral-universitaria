@@ -70,3 +70,9 @@ console.log("Pruebas públicas completadas. Los flujos autenticados se verifican
 const privateProfileDenied=await call("company-applicant-profile",{application_id:1});
 assert.equal(privateProfileDenied.status,401,JSON.stringify(privateProfileDenied.body));
 console.log("OK: el perfil completo de un postulante exige autenticación de empresa.");
+
+const recovery=await call("password-reset-request",{correo:"qa-noexiste-20261121@example.invalid"});
+assert.ok([200,503].includes(recovery.status),"La recuperación respondió inesperadamente: "+JSON.stringify(recovery.body));
+console.log(recovery.status===503
+ ? "PENDIENTE: recuperación por correo sin servicio de envío (HTTP 503)."
+ : "OK: solicitud de recuperación recibida por el servicio de correo.");
