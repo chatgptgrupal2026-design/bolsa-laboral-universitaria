@@ -1,5 +1,7 @@
 # Estado de los requerimientos — TPF04, Grupo 05
 
+**CU14 actualizado (22/11/2026):** empresas sin cuenta pueden enviar ofertas para aprobación desde la portada. El **listado y los detalles de ofertas siguen siendo exclusivos de usuarios autenticados**. El envío externo sin sesión devolvió HTTP 201 y dejó una propuesta pendiente en la base; los datos ficticios se eliminaron tras la prueba. No se modificaron las 18 tablas del DER.
+
 **Acceso a ofertas (decisión del 21/11/2026):** el listado y detalle de ofertas ya no son públicos. Solo usuarios autenticados con cuenta y perfil activos (Estudiante, Empresa verificada, Centro de Estudiantes o Secretaría Académica) pueden consultarlos. Se bloquea la API con HTTP 401 y la navegación dirige a Inicio de sesión; Registro y portada continúan públicos. Esto sustituye cualquier descripción anterior de «listado público» y requiere actualizar los documentos de pruebas que lo consideraban público.
 
 > **Actualización del 21/11/2026:** se corrigieron las incidencias del rol Alumno y Empresa verificadas en documentos de pruebas. Incluye catálogo de **9 carreras CyT**, experiencia laboral en curso, campos profesionales obligatorios, avisos/confirmaciones mejorados y consulta privada del perfil de postulantes por empresa. La nueva batería de pruebas E2E del alumno terminó **32/32 OK**. La recuperación por correo **sigue pendiente de configurar**. Consultar el [informe de correcciones de roles](./INFORME_CORRECCIONES_ROLES_2026-11-21.md) y la [ejecución de pruebas](https://github.com/chatgptgrupal2026-design/bolsa-laboral-universitaria/actions/runs/44967214205).
@@ -25,7 +27,7 @@ Este seguimiento corresponde a los **24 casos de uso del TPF04** y al DER del TP
 | CU11 | Editar ofertas de empresa | SQL OK; E2E de empresa pendiente |
 | CU12 | Dar de baja ofertas y cerrar postulaciones | SQL OK; E2E de empresa pendiente |
 | CU13 | Consultar postulantes y CV | SQL OK; E2E de empresa pendiente |
-| CU14 | Compartir oferta externa con adjunto | SQL OK; acceso anónimo bloqueado; E2E autorizado pendiente |
+| CU14 | Compartir oferta externa con adjunto | HTTP real sin sesión OK (201), remitente/oferta pendiente/carrera/medio comprobados; adjunto opcional pendiente de E2E |
 | CU15 | Revisar ofertas pendientes | SQL OK; E2E de revisor pendiente |
 | CU16 | Evaluar oferta, registrar decisión y vigencia de 14 días | SQL OK, guardado atómico; correo pendiente |
 | CU17 | Vencimiento y cierre automáticos | SQL OK y tarea pg_cron activa |
@@ -37,11 +39,15 @@ Este seguimiento corresponde a los **24 casos de uso del TPF04** y al DER del TP
 | CU23 | Gestionar oferta externa aprobada | SQL OK; E2E de revisor pendiente |
 | CU24 | Actualizar perfil de empresa | SQL OK; E2E de empresa pendiente |
 
-## Restricción de acceso a «Compartir oferta»
+## Acceso a «Compártenos tu oferta laboral» (CU14)
 
-Por decisión de producto del 14/11/2026, **la opción se oculta a invitados, estudiantes y usuarios del Centro de Estudiantes**. Solo puede ingresar un usuario autenticado con rol **Empresa verificada** o **Secretaría Académica**, y el backend comprueba el rol antes de aceptar cualquier envío. La URL directa también está restringida. Las publicaciones propias de empresas verificadas siguen disponibles en «Mi espacio → Mis ofertas».
+**Decisión de corrección del 22/11/2026: restaurado el requisito RF017–RF020 del TPF04.** Las **empresas no verificadas no necesitan cuenta ni iniciar sesión** para remitir una propuesta desde la portada o desde `#compartir`. El formulario recoge razón social, contacto, datos de la oferta, carrera(s), correo o enlace de postulación y adjunto opcional (PDF, PNG o JPEG, hasta 5 MiB).
 
-**Diferencia respecto del TPF04 original:** CU14 describía el envío de ofertas por empresas no verificadas sin iniciar sesión. Este ajuste cambia ese requisito de acceso y debe reflejarse en el documento académico si se mantiene para la entrega.
+Toda propuesta de empresa externa se almacena con origen `Empresa no verificada` y estado **`Pendiente de aprobación`**. **No es visible a los estudiantes** hasta que Centro de Estudiantes o Secretaría Académica la aprueben; en ese momento recibe 14 días de vigencia.
+
+**El catálogo permanece PRIVADO:** `offers`, `offer-detail` y `#ofertas` requieren una cuenta autenticada y habilitada. El formulario externo NO da acceso al listado de oportunidades. Empresas verificadas mantienen la gestión de sus propias ofertas desde su panel.
+
+**Validación:** se ejecutó una solicitud HTTP real sin token contra `public-offer-submit`, que devolvió **201**; se verificaron remitente, oferta pendiente, carrera y medio de postulación en PostgreSQL. Se eliminaron los datos ficticios al terminar. CI prueba envíos incompletos y campo antispam. El control antispam es básico; antes de uso público a gran escala conviene configurar protección contra envíos automatizados como CAPTCHA y limitación de frecuencia.
 
 ## Infraestructura
 
