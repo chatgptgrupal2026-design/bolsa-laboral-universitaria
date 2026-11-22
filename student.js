@@ -8,7 +8,7 @@ let activeTab='inicio';
 let loading=false;
 let editing={};
 const el=()=>document.getElementById('student-area');
-function info(message,kind='success'){const m=document.getElementById('student-message');if(m){m.textContent=message;m.className='alert '+(kind==='success'?'success':'');m.scrollIntoView({block:'nearest',behavior:'smooth'});}}
+function info(message,kind='success'){window.BolsaUI?.notify(message,kind);const m=document.getElementById('student-message');if(m){m.textContent=message;m.className='alert '+(kind==='success'?'success':'');}}
 async function load(){
  if(loading)return;loading=true;
  try{data=await request('student-dashboard',{},true);render();}
@@ -73,7 +73,8 @@ function field(id,label,value,opts={}){
  const extra=opts.readonly?' readonly':'';
  const type=opts.type||'text';
  const req=opts.required?' required':'';
- return '<div class="field"><label for="'+id+'">'+H(label)+'</label><input id="'+id+'" name="'+id+'" type="'+type+'" value="'+H(value)+'"'+extra+req+' /></div>';
+ const disabled=opts.disabled?' disabled':'';
+ return '<div class="field"><label for="'+id+'">'+H(label)+'</label><input id="'+id+'" name="'+id+'" type="'+type+'" value="'+H(value)+'"'+extra+req+disabled+' /></div>';
 }
 function academic(){
  const s=data.student;
@@ -107,9 +108,9 @@ function professional(){
  ['capacitacion','Cursos y certificaciones',data.capacitaciones,'id_capacitacion',['tipo','nombre','institucion','anio']]
  ];
  return '<section class="dashboard-detail-card"><div class="dashboard-card-heading"><div><span class="dashboard-card-kicker">INFORMACIÓN PROFESIONAL</span><h2>Habilidades y disponibilidad</h2><p>Completá tu información para que las empresas la consulten cuando te postules.</p></div></div>'+
- '<form id="professional-form" class="student-form"><div class="field"><label for="prof-habilidades">Habilidades</label><textarea id="prof-habilidades" rows="3" maxlength="1500" placeholder="Comunicación, trabajo en equipo...">'+H(p.habilidades)+'</textarea></div>'+
+ '<form id="professional-form" class="student-form"><div class="field"><label for="prof-habilidades">Habilidades</label><textarea id="prof-habilidades" rows="3" maxlength="1500" placeholder="Comunicación, trabajo en equipo..." required>'+H(p.habilidades)+'</textarea></div>'+
  '<div class="field"><label for="prof-tecnologias">Tecnologías</label><textarea id="prof-tecnologias" rows="3" maxlength="1500" placeholder="Herramientas y tecnologías que manejás">'+H(p.tecnologias)+'</textarea></div>'+
- '<div class="field"><label for="prof-disponibilidad">Disponibilidad laboral</label><select id="prof-disponibilidad"><option value="">Seleccionar...</option>'+['Tiempo completo','Medio tiempo','Pasantía','Por horas','A convenir'].map(x=>'<option '+(x===p.disponibilidad_laboral?'selected':'')+'>'+x+'</option>').join('')+'</select></div>'+
+ '<div class="field"><label for="prof-disponibilidad">Disponibilidad laboral</label><select id="prof-disponibilidad" required><option value="">Seleccionar...</option>'+['Tiempo completo','Medio tiempo','Pasantía','Por horas','A convenir'].map(x=>'<option '+(x===p.disponibilidad_laboral?'selected':'')+'>'+x+'</option>').join('')+'</select></div>'+
  '<div class="dashboard-form-actions"><span>Actualizá esta información cuando lo necesites.</span><button class="btn btn-primary" type="submit">Guardar cambios</button></div></form></section>'+
  collections.map(([key,title,items,idField,fields])=>collection(key,title,items,idField,fields)).join('');
 }
@@ -118,7 +119,9 @@ function collection(type,title,items,key,fields){
  const current=editing[type];
  return '<section class="student-collection"><div class="collection-title"><h3>'+title+'</h3><button class="btn btn-secondary" data-add-item="'+type+'">Agregar</button></div>'+
  (items.length?'<div class="compact-list">'+items.map(x=>'<div class="compact-item"><div><strong>'+H(x.empresa||x.nombre||'Registro')+'</strong><small>'+H(x.cargo||x.nivel||x.institucion||x.tipo||'')+'</small></div><div class="compact-actions"><button class="text-button" data-edit-item="'+type+'" data-item-id="'+x[key]+'">Editar</button><button class="text-button danger" data-delete-item="'+type+'" data-item-id="'+x[key]+'">Eliminar</button></div></div>').join('')+'</div>':'<p class="muted">Todavía no registraste información.</p>')+
- (current?'<form class="item-form student-form" data-item-form="'+type+'"><h4>'+(current.id?'Editar':'Agregar')+' '+title.toLowerCase()+'</h4><div class="field-grid">'+fields.map(f=>field('item-'+f,names[f],current.values?.[f]||'',{type:f.startsWith('fecha_')?'date':f==='anio'?'number':'text'})).join('')+'</div><div class="inline-actions"><button type="submit" class="btn btn-primary">Guardar</button><button type="button" class="btn btn-secondary" data-cancel-item="'+type+'">Cancelar</button></div></form>':'')+'</section>';
+ (current?'<form class="item-form student-form" data-item-form="'+type+'"><h4>'+(current.id?'Editar':'Agregar')+' '+title.toLowerCase()+'</h4><div class="field-grid">'+fields.map(f=>field('item-'+f,names[f],current.values?.[f]||'',{type:f.startsWith('fecha_')?'date':f==='anio'?'number':'text',required:type==='experiencia'&&['empresa','cargo','fecha_inicio'].includes(f),disabled:type==='experiencia'&&f==='fecha_fin'&&Boolean(current.id)&&!current.values?.fecha_fin})).join('')+'</div>'+
+ (type==='experiencia'?'<label class="ux-work-current"><input id="item-actualmente_trabajo" name="item-actualmente_trabajo" type="checkbox" value="true" '+(current.id&&!current.values?.fecha_fin?'checked':'')+' /><span>Actualmente estoy trabajando en este lugar</span></label><p class="ux-form-help">Si seguís trabajando aquí, marcá la casilla y no hace falta indicar una fecha de finalización.</p>':'')+
+ '<div class="inline-actions"><button type="submit" class="btn btn-primary">Guardar</button><button type="button" class="btn btn-secondary" data-cancel-item="'+type+'">Cancelar</button></div></form>':'')+'</section>';
 }
 function curriculum(){
  const cv=data.cv;
@@ -151,7 +154,8 @@ async function showOffer(id){
  try{
   const r=await request('offer-detail',{offer_id:Number(id)});
   const o=r.offer;
-  const expired=o.estado!=='Publicada'||(!o.vigencia_indefinida&&o.fecha_vencimiento&&o.fecha_vencimiento<new Date().toISOString().slice(0,10));
+  const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Asuncion',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const expired=o.estado!=='Publicada'||(!o.vigencia_indefinida&&o.fecha_vencimiento&&o.fecha_vencimiento<today);
   modal.innerHTML='<div class="modal-body"><button class="close-dialog" data-close-offer aria-label="Cerrar">×</button><span class="eyebrow dark">'+H(o.tipo)+'</span><h2>'+H(o.titulo)+'</h2>'+
   rowHTML('Empresa',o.empresa)+rowHTML('Carreras',o.carreras.map(x=>x.nombre).join(', '))+
   rowHTML('Estado',o.estado)+(o.vigencia_indefinida?rowHTML('Vigencia','Indefinida'):rowHTML('Fecha de vencimiento',o.fecha_vencimiento))+
@@ -183,7 +187,7 @@ document.addEventListener('click',async e=>{
    return;
  }
  const del=e.target.closest('[data-delete-item]');if(del){
-   if(confirm('¿Eliminar este registro?'))await perform('student-item-remove',{item_type:del.dataset.deleteItem,item_id:Number(del.dataset.itemId)},'Registro eliminado.');
+   if(await window.BolsaUI.confirm('¿Eliminar este registro?',{title:'Eliminar registro',confirmLabel:'Eliminar',danger:true}))await perform('student-item-remove',{item_type:del.dataset.deleteItem,item_id:Number(del.dataset.itemId)},'Registro eliminado.');
    return;
  }
  const offer=e.target.closest('[data-open-offer]');if(offer){await showOffer(offer.dataset.openOffer);return;}
@@ -195,23 +199,28 @@ document.addEventListener('click',async e=>{
    return;
  }
  const remove=e.target.closest('#remove-cv');if(remove){
-  if(confirm('¿Querés eliminar tu currículum? No se puede deshacer.')){
+  if(await window.BolsaUI.confirm('¿Querés eliminar tu currículum? No se puede deshacer.',{title:'Eliminar currículum',confirmLabel:'Eliminar PDF',danger:true})){
    await perform('student-cv-remove',{},'Currículum eliminado.');
   }
   return;
  }
  const apply=e.target.closest('[data-apply]');if(apply){
-   if(confirm('¿Confirmás tu postulación a esta oferta?')){
+   if(await window.BolsaUI.confirm('¿Querés enviar tu postulación a esta oferta?',{title:'Confirmar postulación',confirmLabel:'Sí, postularme'})){
      const ok=await perform('student-apply',{offer_id:Number(apply.dataset.apply)},'Postulación registrada.');
      if(ok){document.getElementById('offer-modal')?.close();nav('postulaciones');}
    }return;
  }
  const withdraw=e.target.closest('[data-withdraw]');if(withdraw){
-   if(confirm('¿Retirar tu postulación? No podrás postularte nuevamente a esta oferta.')){
+   if(await window.BolsaUI.confirm('No podrás volver a postularte a esta oferta después de retirarte.',{title:'Retirar postulación',confirmLabel:'Retirar postulación',danger:true})){
      const ok=await perform('student-withdraw',{application_id:Number(withdraw.dataset.withdraw)},'Postulación retirada.');
      if(ok)nav('postulaciones');
    }return;
  }
+});
+document.addEventListener('change',e=>{
+ if(e.target?.id!=='item-actualmente_trabajo')return;
+ const end=document.getElementById('item-fecha_fin');
+ if(end){if(e.target.checked)end.value='';end.disabled=e.target.checked;}
 });
 document.addEventListener('submit',async e=>{
  const f=e.target;
@@ -234,6 +243,12 @@ document.addEventListener('submit',async e=>{
   e.preventDefault();const type=f.dataset.itemForm;const input=Object.fromEntries(new FormData(f));
   const values={};for(const [k,v] of Object.entries(input))values[k.replace('item-','')]=v;
   const entry=editing[type];
+  if(type==='experiencia'){
+   const ongoing=f.querySelector('#item-actualmente_trabajo')?.checked||false;
+   values.actualmente_trabajo=ongoing;
+   if(ongoing)values.fecha_fin='';
+   if(!values.empresa?.trim()||!values.cargo?.trim()||!values.fecha_inicio){info('Ingresá empresa, cargo y fecha de inicio.','error');return;}
+  }
   const ok=await perform('student-item-save',{item_type:type,item_id:entry.id,...values},'Registro guardado.');
   if(ok){delete editing[type];render();}
  }else if(f.id==='password-form'){
