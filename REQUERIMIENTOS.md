@@ -1,5 +1,7 @@
 # Estado de los requerimientos — TPF04, Grupo 05
 
+**Acceso a ofertas (decisión del 21/11/2026):** el listado y detalle de ofertas ya no son públicos. Solo usuarios autenticados con cuenta y perfil activos (Estudiante, Empresa verificada, Centro de Estudiantes o Secretaría Académica) pueden consultarlos. Se bloquea la API con HTTP 401 y la navegación dirige a Inicio de sesión; Registro y portada continúan públicos. Esto sustituye cualquier descripción anterior de «listado público» y requiere actualizar los documentos de pruebas que lo consideraban público.
+
 > **Actualización del 21/11/2026:** se corrigieron las incidencias del rol Alumno y Empresa verificadas en documentos de pruebas. Incluye catálogo de **9 carreras CyT**, experiencia laboral en curso, campos profesionales obligatorios, avisos/confirmaciones mejorados y consulta privada del perfil de postulantes por empresa. La nueva batería de pruebas E2E del alumno terminó **32/32 OK**. La recuperación por correo **sigue pendiente de configurar**. Consultar el [informe de correcciones de roles](./INFORME_CORRECCIONES_ROLES_2026-11-21.md) y la [ejecución de pruebas](https://github.com/chatgptgrupal2026-design/bolsa-laboral-universitaria/actions/runs/44967214205).
 
 Este seguimiento corresponde a los **24 casos de uso del TPF04** y al DER del TPF05. La base conserva las 18 tablas del modelo académico, además del esquema privado `simulacion_academica` para verificar estudiantes sin acceso al sistema universitario real.
