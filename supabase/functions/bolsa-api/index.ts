@@ -497,7 +497,7 @@ Deno.serve(async req => {
   const [pending,approved,history]=await Promise.all([
    db("oferta_laboral",{select:"id_oferta,id_remitente,titulo,tipo,descripcion,requisitos,fecha_envio,estado",estado:"eq.Pendiente de aprobación",id_remitente:"not.is.null",order:"fecha_envio.asc"}),
    db("oferta_laboral",{select:"id_oferta,id_remitente,titulo,tipo,descripcion,requisitos,fecha_vencimiento,estado",estado:"eq.Publicada",id_remitente:"not.is.null",order:"id_oferta.desc"}),
-   db("oferta_laboral",{select:"id_oferta,id_remitente,titulo,tipo,fecha_baja,fecha_vencimiento,estado",estado:"in.(Rechazada,Dada de baja,Vencida)",id_remitente:"not.is.null",order:"id_oferta.desc"})
+   db("oferta_laboral",{select:"id_oferta,id_remitente,titulo,tipo,fecha_baja,fecha_vencimiento,estado",estado:'in.(Rechazada,"Dada de baja",Vencida)',id_remitente:"not.is.null",order:"id_oferta.desc"})
   ]);
   const all=[...pending,...approved,...history];
   const remitentes=all.length?await db("empresa_remitente",{select:"*",id_remitente:"in.("+[...new Set(all.map(x=>x.id_remitente))].join(",")+")"}):[];
