@@ -67,3 +67,9 @@ Este repositorio está vinculado al proyecto de Vercel mediante **Settings → G
 ## Consulta privada de ofertas
 
 El catálogo y el detalle de ofertas requieren una sesión válida, con usuario habilitado y perfil de rol activo. La portada y el registro de estudiantes continúan públicos. Se protegen las rutas `#ofertas`, las llamadas `offers` y `offer-detail` y se elimina el catálogo cargado al cerrar sesión. Las pruebas de seguridad están en `tests/smoke.mjs`, `tests/front-design.mjs` y `tests/e2e-student-once.mjs`.
+
+## Empresas no verificadas — CU14
+
+La página principal incluye **«Compártenos tu oferta laboral»** para empresas **sin usuario y sin iniciar sesión**. Pueden remitir datos de contacto, oferta, carreras, medio externo de postulación y adjunto opcional para revisión. La oferta queda **Pendiente de aprobación**; los revisores del Centro de Estudiantes o Secretaría deciden su publicación y, si la aprueban, la vigencia será de 14 días. Esto **no hace público el catálogo**, que sigue requiriendo sesión válida.
+
+Se verificó un envío HTTP anónimo de prueba (201) y sus registros en PostgreSQL; luego se borraron los datos QA. Antispam básico por campo trampa; queda recomendado añadir protección avanzada antes de abrir el formulario a tráfico masivo.
