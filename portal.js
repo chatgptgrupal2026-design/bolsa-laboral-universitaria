@@ -69,6 +69,7 @@ const menuForRole=()=>isCompany()?
  {id:'inicio',label:'Inicio',icon:'inicio',description:'Resumen de gestiones y ofertas del sistema.'},
  {id:'pendientes',label:'Ofertas pendientes',icon:'pendientes',description:'Revisá las ofertas remitidas por empresas sin cuenta.'},
  {id:'aprobadas',label:'Ofertas aprobadas',icon:'aprobadas',description:'Gestioná las ofertas aprobadas de empresas externas.'},
+ {id:'historial',label:'Historial de ofertas',icon:'ofertas',description:'Consultá ofertas rechazadas, dadas de baja o vencidas.'},
  ...(isSecretary()?[
  {id:'empresas',label:'Empresas verificadas',icon:'empresas',description:'Administrá las empresas habilitadas en la plataforma.'},
  {id:'revisores',label:'Usuarios revisores',icon:'revisores',description:'Gestioná los usuarios del Centro de Estudiantes y Secretaría.'}
@@ -108,7 +109,7 @@ function portalHome(){
   ['ofertas','Administrar ofertas','Publicá empleos o pasantías','ofertas']
  ]:[
   ['pendientes','Revisar pendientes','Evaluá nuevas ofertas laborales','pendientes'],
-  ['aprobadas','Ofertas aprobadas','Consultá las publicaciones revisadas','aprobadas']
+  ['historial','Historial de ofertas','Revisá bajas y rechazos','ofertas']
  ];
  return '<section class="dashboard-welcome"><div><span class="dashboard-kicker">'+E(label.toUpperCase())+'</span>'+
  '<h2>Bienvenido a tu panel</h2><p>Realizá tus gestiones desde un solo lugar, con acceso directo a cada módulo.</p>'+
@@ -141,6 +142,7 @@ function render(){
  }else{
   if(tab==='pendientes')area().innerHTML=reviewList(false);
   if(tab==='aprobadas')area().innerHTML=reviewList(true);
+  if(tab==='historial')area().innerHTML=reviewList(false,true);
   if(tab==='empresas')area().innerHTML=adminCompanies();
   if(tab==='revisores')area().innerHTML=adminReviewers();
  }
@@ -207,25 +209,28 @@ function applicantsHtml(){
   (p.cv?'<button type="button" class="btn btn-secondary" data-applicant-cv="'+p.id_postulacion+'">Ver CV</button>':'<span class="muted">Sin CV</span>')+'</div></article>').join('')+'</div>':'<div class="status-message">Esta oferta aún no tiene postulantes.</div>')+
  applicantProfileHtml(selectedProfile)+'</section>';
 }
-function reviewList(approved){
- const items=approved?view.approved:view.pending;
- let html='<h2>'+(approved?'Ofertas aprobadas de empresas no verificadas':'Ofertas pendientes')+'</h2>'+
- '<p class="muted">'+(approved?'Podés modificar o dar de baja una oferta aprobada sin prolongar su vencimiento.':'Revisá los datos antes de aprobar o rechazar.')+'</p>';
+function reviewList(approved,historical=false){
+ const items=historical?view.history:(approved?view.approved:view.pending);
+ let html='<h2>'+(historical?'Historial de ofertas externas':approved?'Ofertas aprobadas de empresas no verificadas':'Ofertas pendientes')+'</h2>'+
+ '<p class="muted">'+(historical?'Consultá las ofertas rechazadas, dadas de baja y vencidas. Los registros se conservan para auditoría.':approved?'Podés modificar o dar de baja una oferta aprobada sin prolongar su vencimiento.':'Revisá los datos antes de aprobar o rechazar.')+'</p>';
  if(!items?.length)return html+'<div class="status-message">No hay ofertas en esta sección.</div>';
  html+='<div class="compact-list">'+items.map(o=>
-  '<article class="compact-item"><div><strong>'+E(o.titulo)+'</strong><small>'+E(o.tipo)+' · '+E(o.empresa?.razon_social||'Empresa remitente')+'</small></div><button class="btn btn-secondary" data-review-detail="'+o.id_oferta+'">Ver detalle</button></article>').join('')+'</div>';
- if(reviewOffer)html+=reviewDetail(approved);
+  '<article class="compact-item"><div><strong>'+E(o.titulo)+'</strong><small>'+E(o.tipo)+' · '+E(o.empresa?.razon_social||'Empresa remitente')+' · '+E(o.estado)+'</small></div><button class="btn btn-secondary" type="button" data-review-detail="'+o.id_oferta+'">Ver detalle</button></article>').join('')+'</div>';
+ if(reviewOffer)html+=reviewDetail(approved,historical);
  return html;
 }
-function reviewDetail(approved){
+function reviewDetail(approved,historical=false){
  const p=reviewOffer,o=p.offer,c=p.sender||{},media=p.media?.[0]||{};
  return '<div class="student-collection"><h3>Detalle: '+E(o.titulo)+'</h3>'+
  '<p><strong>Empresa:</strong> '+E(c.razon_social)+' · '+E(c.persona_contacto)+'</p><p><strong>Contacto:</strong> '+E(c.correo_contacto)+' · '+E(c.telefono_contacto)+'</p>'+
  '<p><strong>Tipo:</strong> '+E(o.tipo)+'</p><p><strong>Estado:</strong> '+E(o.estado)+'</p>'+
  '<p class="preserve-lines">'+E(o.descripcion)+'</p><p><strong>Requisitos:</strong> '+E(o.requisitos)+'</p>'+
  '<p><strong>Medio de postulación:</strong> '+E(media.tipo)+' — '+E(media.valor)+'</p>'+
- (p.attachments?.length?'<h4>Adjuntos</h4>'+p.attachments.map(x=>'<button class="btn btn-secondary" data-review-attachment="'+x.id_adjunto+'">'+E(x.nombre_archivo)+'</button>').join(''):'')+
- (approved?'<form id="approved-edit-form" class="student-form item-form">'+
+ (p.attachments?.length?'<h4>Adjuntos</h4>'+p.attachments.map(x=>'<button class="btn btn-secondary" type="button" data-review-attachment="'+x.id_adjunto+'">Abrir '+E(x.nombre_archivo)+'</button>').join(''):'')+
+ ((historical||p.revisions?.length)?'<div class="review-audit"><h4>Historial de revisión</h4>'+
+ (p.revisions?.length?p.revisions.map(r=>'<p><strong>'+E(r.decision)+'</strong> · '+E(r.revisor?.instancia||'Revisor')+' · '+E(r.fecha_revision||'')+(r.motivo_rechazo?'<br><strong>Motivo del rechazo:</strong> '+E(r.motivo_rechazo):'')+'</p>').join(''):'<p>No hay decisiones registradas.</p>')+
+ (o.fecha_baja?'<p><strong>Fecha de baja:</strong> '+E(o.fecha_baja)+'</p>':'')+'</div>':'')+
+ (historical?'':approved?'<form id="approved-edit-form" class="student-form item-form">'+
  input('titulo','Título',o.titulo,'text',true)+
  '<div class="field"><label for="portal-aprobada-descripcion">Descripción</label><textarea name="descripcion" id="portal-aprobada-descripcion" rows="3" required>'+E(o.descripcion)+'</textarea></div>'+
  '<div class="field"><label for="portal-aprobada-requisitos">Requisitos</label><textarea name="requisitos" id="portal-aprobada-requisitos" rows="3" required>'+E(o.requisitos)+'</textarea></div>'+
@@ -239,7 +244,7 @@ function adminCompanies(){
  const list=view.companies||[];
  return '<h2>Empresas verificadas</h2><p class="muted">Secretaría Académica registra y habilita o deshabilita a las empresas.</p>'+
  '<button class="btn btn-primary" data-add-company>Registrar empresa</button>'+
- (list.length?'<div class="compact-list">'+list.map(c=>'<div class="compact-item"><div><strong>'+E(c.razon_social)+'</strong><small>RUC '+E(c.ruc)+' · '+E(c.usuario?.nombre_usuario)+' · '+(c.habilitada?'Habilitada':'Deshabilitada')+'</small></div><button class="text-button" data-edit-company="'+c.id_empresa+'">Modificar</button></div>').join('')+'</div>':'<div class="status-message">No hay empresas verificadas.</div>')+
+ (list.length?'<div class="compact-list">'+list.map(c=>'<div class="compact-item"><div><strong>'+E(c.razon_social)+'</strong><small>RUC '+E(c.ruc)+' · '+E(c.usuario?.nombre_usuario)+' · '+(c.habilitada?'Habilitada':'Deshabilitada')+'</small><small>Contacto: '+E(c.persona_contacto||'No informado')+' · '+E(c.correo_contacto||'Sin correo')+' · '+E(c.telefono||'Sin teléfono')+'</small><p class="admin-company-description">'+E(c.descripcion||'Sin descripción de empresa')+'</p></div><button class="text-button" data-edit-company="'+c.id_empresa+'">Modificar</button></div>').join('')+'</div>':'<div class="status-message">No hay empresas verificadas.</div>')+
  (window._portalForm?window._portalForm:'');
 }
 function adminReviewers(){
@@ -255,7 +260,9 @@ function adminForm(kind,x){
  return '<form id="portal-admin-form" class="student-form item-form" data-admin-action="'+mode+'" data-admin-id="'+E(isC?x?.id_empresa:x?.id_revisor)+'">'+
  '<h3>'+(existing?'Modificar':'Crear')+' '+(isC?'empresa':'usuario revisor')+'</h3>'+
  (existing?'':input('usuario','Nombre de usuario','','text',true)+input('correo','Correo electrónico','','email',true))+
- (isC?input('razon_social','Razón social',x?.razon_social,'text',true)+(existing?'':input('ruc','RUC',x?.ruc,'text',true))+input('persona_contacto','Persona de contacto',x?.persona_contacto,'text',true)+input('telefono','Teléfono',x?.telefono,'tel')+(existing?input('correo_contacto','Correo de contacto',x?.correo_contacto,'email',true):''):
+ (isC?input('razon_social','Razón social',x?.razon_social,'text',true)+(existing?'':input('ruc','RUC',x?.ruc,'text',true))+
+ '<div class="field"><label for="portal-admin-descripcion">Descripción de empresa</label><textarea id="portal-admin-descripcion" name="descripcion" rows="4" maxlength="2000">'+E(x?.descripcion||'')+'</textarea></div>'+
+ input('persona_contacto','Persona de contacto',x?.persona_contacto,'text',true)+input('telefono','Teléfono',x?.telefono,'tel')+(existing?input('correo_contacto','Correo de contacto',x?.correo_contacto,'email',true):''):
  input('nombre','Nombre',x?.nombre,'text',true)+input('apellido','Apellido',x?.apellido,'text',true)+
  '<div class="field"><label for="portal-instancia">Instancia</label><select name="instancia" id="portal-instancia">'+
  ['Centro de Estudiantes','Secretaría Académica'].map(t=>option(t,t,x?.instancia===t)).join('')+'</select></div>')+
@@ -324,11 +331,27 @@ document.addEventListener('click',async e=>{
  const attachment=e.target.closest('[data-review-attachment]');
  if(attachment){const pop=window.open('about:blank','_blank');try{const r=await request('reviewer-attachment',{attachment_id:Number(attachment.dataset.reviewAttachment)},true);if(pop)pop.location.href=r.url;else message('Enlace del adjunto (copiar y abrir): '+r.url);}catch(err){pop?.close();message(err.message,true);}return;}
  const approve=e.target.closest('[data-review-approve]');
- if(approve){if(confirm('¿Confirmás la aprobación de esta oferta por 14 días?')){reviewOffer=null;await perform('reviewer-evaluate',{offer_id:Number(approve.dataset.reviewApprove),decision:'Aprobar'});}return;}
+ if(approve){
+  if(await window.BolsaUI.confirm('La oferta será publicada por 14 días y podrá ser consultada por usuarios autorizados.',{title:'Aprobar oferta laboral',confirmLabel:'Aprobar y publicar'})){
+   const ok=await perform('reviewer-evaluate',{offer_id:Number(approve.dataset.reviewApprove),decision:'Aprobar'});
+   if(ok){reviewOffer=null;render();}
+  }return;
+ }
  const reject=e.target.closest('[data-review-reject]');
- if(reject){const motivo=prompt('Motivo del rechazo (obligatorio):');if(motivo?.trim()){reviewOffer=null;await perform('reviewer-evaluate',{offer_id:Number(reject.dataset.reviewReject),decision:'Rechazar',motivo});}return;}
+ if(reject){
+  const motivo=await window.BolsaUI.reason('Explicá por qué se rechaza la oferta. Este motivo quedará guardado en el historial.',{title:'Rechazar oferta laboral'});
+  if(motivo){
+   const ok=await perform('reviewer-evaluate',{offer_id:Number(reject.dataset.reviewReject),decision:'Rechazar',motivo});
+   if(ok){reviewOffer=null;render();}
+  }return;
+ }
  const reviewDrop=e.target.closest('[data-review-drop]');
- if(reviewDrop){if(confirm('¿Dar de baja esta oferta?')){reviewOffer=null;await perform('reviewer-approved-drop',{offer_id:Number(reviewDrop.dataset.reviewDrop)});}return;}
+ if(reviewDrop){
+  if(await window.BolsaUI.confirm('La oferta dejará de estar publicada, pero seguirá en el historial de revisiones.',{title:'Dar de baja oferta',confirmLabel:'Dar de baja',danger:true})){
+   const ok=await perform('reviewer-approved-drop',{offer_id:Number(reviewDrop.dataset.reviewDrop)});
+   if(ok){reviewOffer=null;render();}
+  }return;
+ }
  if(e.target.closest('[data-add-company]')){window._portalForm=adminForm('company',null);render();return;}
  if(e.target.closest('[data-add-reviewer]')){window._portalForm=adminForm('reviewer',null);render();return;}
  const editC=e.target.closest('[data-edit-company]');
