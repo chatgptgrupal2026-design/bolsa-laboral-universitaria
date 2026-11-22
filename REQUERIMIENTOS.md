@@ -6,6 +6,8 @@
 
 > **Actualización del 21/11/2026:** se corrigieron las incidencias del rol Alumno y Empresa verificadas en documentos de pruebas. Incluye catálogo de **9 carreras CyT**, experiencia laboral en curso, campos profesionales obligatorios, avisos/confirmaciones mejorados y consulta privada del perfil de postulantes por empresa. La nueva batería de pruebas E2E del alumno terminó **32/32 OK**. La recuperación por correo **sigue pendiente de configurar**. Consultar el [informe de correcciones de roles](./INFORME_CORRECCIONES_ROLES_2026-11-21.md) y la [ejecución de pruebas](https://github.com/chatgptgrupal2026-design/bolsa-laboral-universitaria/actions/runs/44967214205).
 
+> **Actualización 22/11/2026 — Administrador/Empresa:** se implementaron mejoras del informe de 8 páginas: ficha completa de empresa (RF031), flyer privado en oferta externa aprobada (RF023), edición transaccional de oferta aprobada (RF033), historial de ofertas rechazadas/dadas de baja (RF033) y diálogos de aprobación/rechazo (RF022). RF026 conserva su corrección anterior. **Pendientes:** correo real de rechazo y pruebas E2E positivas en navegador con sesiones administrativas y de empresa. Consultar [informe de administrador y empresa](./INFORME_CORRECCIONES_ADMIN_EMPRESA_2026-11-22.md).
+
 Este seguimiento corresponde a los **24 casos de uso del TPF04** y al DER del TPF05. La base conserva las 18 tablas del modelo académico, además del esquema privado `simulacion_academica` para verificar estudiantes sin acceso al sistema universitario real.
 
 **Leyenda:** Código publicado = frontend y backend desplegados, pero no necesariamente probados de principio a fin. Operativo comprobado = se verificó la operación o su programación.
