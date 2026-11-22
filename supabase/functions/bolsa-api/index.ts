@@ -253,12 +253,13 @@ Deno.serve(async req => {
   const id=numberId(input.offer_id);if(!id)return fail("Oferta inválida.");
   const offers=await db("oferta_laboral",{select:"*",id_oferta:"eq."+id,estado:"in.(Publicada,Vencida)",limit:1});
   const offer=offers[0];if(!offer)return fail("Oferta no disponible.",404);
-  const [careers,media,reviews,employers,senders]=await Promise.all([
+  const [careers,media,reviews,employers,senders,attachments]=await Promise.all([
    db("oferta_carrera",{select:"id_carrera,carrera(nombre)",id_oferta:"eq."+id}),
    db("medio_postulacion",{select:"tipo,valor",id_oferta:"eq."+id}),
    db("revision_oferta",{select:"decision,revisor(instancia)",id_oferta:"eq."+id,order:"fecha_revision.desc",limit:1}),
    offer.id_empresa?db("empresa_verificada",{select:"razon_social",id_empresa:"eq."+offer.id_empresa,limit:1}):Promise.resolve([]),
-   offer.id_remitente?db("empresa_remitente",{select:"razon_social",id_remitente:"eq."+offer.id_remitente,limit:1}):Promise.resolve([])
+   offer.id_remitente?db("empresa_remitente",{select:"razon_social",id_remitente:"eq."+offer.id_remitente,limit:1}):Promise.resolve([]),
+   offer.id_remitente?db("adjunto_oferta",{select:"id_adjunto,nombre_archivo,formato",id_oferta:"eq."+id}):Promise.resolve([])
   ]);
   return response({ok:true,offer:{
    id_oferta:offer.id_oferta,titulo:offer.titulo,tipo:offer.tipo,descripcion:offer.descripcion,requisitos:offer.requisitos,
@@ -266,16 +267,29 @@ Deno.serve(async req => {
    fecha_vencimiento:offer.fecha_vencimiento,vigencia_indefinida:offer.vigencia_indefinida,
    verificada:Boolean(offer.id_empresa),empresa:employers[0]?.razon_social||senders[0]?.razon_social||"",
    carreras:careers.map(c=>({id_carrera:c.id_carrera,nombre:c.carrera?.nombre||""})),
-   medios:media,aprobada_por:reviews[0]?.revisor?.instancia||""
+   medios:media,adjuntos:attachments,aprobada_por:reviews[0]?.revisor?.instancia||""
   }});
  }
 
 
 
+ if(action==="offer-attachment"){
+  // Un adjunto solo puede consultarse por usuario válido, y si la oferta está publicada o vencida.
+  if(!(await canViewOffers(req)))return fail("Iniciá sesión para ver el adjunto de la oferta.",401);
+  const id=numberId(input.attachment_id),offerId=numberId(input.offer_id);
+  if(!id||!offerId)return fail("Adjunto inválido.");
+  const [offer,attachment]=await Promise.all([
+   db("oferta_laboral",{select:"id_oferta",id_oferta:"eq."+offerId,id_remitente:"not.is.null",estado:"in.(Publicada,Vencida)",limit:1}),
+   db("adjunto_oferta",{select:"id_oferta,ruta_archivo",id_adjunto:"eq."+id,limit:1})
+  ]);
+  if(!offer.length||!attachment.length||attachment[0].id_oferta!==offerId)return fail("Adjunto no disponible.",404);
+  return response({ok:true,url:await signedAssetUrl("adjuntos-ofertas",attachment[0].ruta_archivo)});
+ }
+
  if(action==="secretary-dashboard"){
   const actor=await actorFor(req,["Secretaría Académica"]);if(!actor)return fail("Acceso de Secretaría requerido.",401);
   const [companies,reviewers]=await Promise.all([
-    db("empresa_verificada",{select:"id_empresa,id_usuario,ruc,razon_social,persona_contacto,correo_contacto,telefono,habilitada",order:"id_empresa.desc"}),
+    db("empresa_verificada",{select:"id_empresa,id_usuario,ruc,razon_social,descripcion,persona_contacto,correo_contacto,telefono,habilitada",order:"id_empresa.desc"}),
     db("revisor",{select:"id_revisor,id_usuario,nombre,apellido,instancia,habilitado",order:"id_revisor.desc"})
   ]);
   const userIds=[...new Set([...companies,...reviewers].map(x=>x.id_usuario))];
@@ -302,7 +316,7 @@ Deno.serve(async req => {
   const temporary="BLU-"+b64(raw);
   const user=(await db("usuario",{},[{nombre_usuario:username,correo:email,contrasena_hash:await passHash(temporary),tipo_usuario:isCompany?"Empresa verificada":instance,habilitado:true}],"POST"))[0];
   try{
-   if(isCompany)await db("empresa_verificada",{},[{id_usuario:user.id_usuario,ruc,razon_social:name,persona_contacto:contact,correo_contacto:email,telefono:safeField(input.telefono,30)||null,habilitada:true}],"POST");
+   if(isCompany)await db("empresa_verificada",{},[{id_usuario:user.id_usuario,ruc,razon_social:name,descripcion:safeField(input.descripcion,2000)||null,persona_contacto:contact,correo_contacto:email,telefono:safeField(input.telefono,30)||null,habilitada:true}],"POST");
    else await db("revisor",{},[{id_usuario:user.id_usuario,nombre:name,apellido:last,instancia:instance,habilitado:true}],"POST");
   }catch(e){
    await db("usuario",{id_usuario:"eq."+user.id_usuario},null,"DELETE").catch(()=>{});
@@ -322,7 +336,7 @@ Deno.serve(async req => {
   if(!found.length)return fail("Registro no encontrado.",404);
   if(found[0].id_usuario===actor.user.id_usuario&&!enabled)return fail("No podés deshabilitar tu propio usuario.",409);
   const data=isCompany?
-   {razon_social:safeField(input.razon_social,160),persona_contacto:safeField(input.persona_contacto,120),correo_contacto:safeField(input.correo_contacto,160).toLowerCase(),telefono:safeField(input.telefono,30)||null,habilitada:enabled}:
+   {razon_social:safeField(input.razon_social,160),descripcion:safeField(input.descripcion,2000)||null,persona_contacto:safeField(input.persona_contacto,120),correo_contacto:safeField(input.correo_contacto,160).toLowerCase(),telefono:safeField(input.telefono,30)||null,habilitada:enabled}:
    {nombre:safeField(input.nombre,100),apellido:safeField(input.apellido,100),instancia:safeField(input.instancia,60),habilitado:enabled};
   if(isCompany&&(!data.razon_social||!data.persona_contacto||!validEmail(data.correo_contacto)))return fail("Completá los datos de la empresa.");
   if(!isCompany&&(!data.nombre||!data.apellido||!["Centro de Estudiantes","Secretaría Académica"].includes(data.instancia)))return fail("Datos de revisor inválidos.");
@@ -480,15 +494,16 @@ Deno.serve(async req => {
  }
  if(action==="reviewer-dashboard"){
   const actor=await actorFor(req,["Centro de Estudiantes","Secretaría Académica"]);if(!actor)return fail("Acceso de revisor requerido.",401);
-  const [pending,approved]=await Promise.all([
-   db("oferta_laboral",{select:"id_oferta,id_remitente,titulo,tipo,descripcion,requisitos,fecha_envio,estado",estado:"eq.Pendiente de aprobación",order:"fecha_envio.asc"}),
-   db("oferta_laboral",{select:"id_oferta,id_remitente,titulo,tipo,descripcion,requisitos,fecha_vencimiento,estado",estado:"eq.Publicada",id_remitente:"not.is.null",order:"id_oferta.desc"})
+  const [pending,approved,history]=await Promise.all([
+   db("oferta_laboral",{select:"id_oferta,id_remitente,titulo,tipo,descripcion,requisitos,fecha_envio,estado",estado:"eq.Pendiente de aprobación",id_remitente:"not.is.null",order:"fecha_envio.asc"}),
+   db("oferta_laboral",{select:"id_oferta,id_remitente,titulo,tipo,descripcion,requisitos,fecha_vencimiento,estado",estado:"eq.Publicada",id_remitente:"not.is.null",order:"id_oferta.desc"}),
+   db("oferta_laboral",{select:"id_oferta,id_remitente,titulo,tipo,fecha_baja,fecha_vencimiento,estado",estado:"in.(Rechazada,Dada de baja,Vencida)",id_remitente:"not.is.null",order:"id_oferta.desc"})
   ]);
-  const all=[...pending,...approved];
+  const all=[...pending,...approved,...history];
   const remitentes=all.length?await db("empresa_remitente",{select:"*",id_remitente:"in.("+[...new Set(all.map(x=>x.id_remitente))].join(",")+")"}):[];
   const applicantsMap=new Map(remitentes.map(e=>[e.id_remitente,e]));
   for(const o of all)o.empresa=applicantsMap.get(o.id_remitente)||null;
-  return response({ok:true,reviewer:actor.reviewer,pending,approved});
+  return response({ok:true,reviewer:actor.reviewer,pending,approved,history});
  }
  if(action==="reviewer-offer-detail"){
   const actor=await actorFor(req,["Centro de Estudiantes","Secretaría Académica"]);if(!actor)return fail("Acceso de revisor requerido.",401);
@@ -496,13 +511,14 @@ Deno.serve(async req => {
   const arr=await db("oferta_laboral",{select:"*",id_oferta:"eq."+id,id_remitente:"not.is.null",limit:1});
   if(!arr.length)return fail("Oferta inexistente.",404);
   const o=arr[0];
-  const [sender,media,careers,attachments]=await Promise.all([
+  const [sender,media,careers,attachments,revisions]=await Promise.all([
    db("empresa_remitente",{select:"*",id_remitente:"eq."+o.id_remitente,limit:1}),
    db("medio_postulacion",{select:"tipo,valor",id_oferta:"eq."+id}),
    db("oferta_carrera",{select:"id_carrera,carrera(nombre)",id_oferta:"eq."+id}),
-   db("adjunto_oferta",{select:"id_adjunto,nombre_archivo,ruta_archivo,formato",id_oferta:"eq."+id})
+   db("adjunto_oferta",{select:"id_adjunto,nombre_archivo,ruta_archivo,formato",id_oferta:"eq."+id}),
+   db("revision_oferta",{select:"decision,motivo_rechazo,fecha_revision,revisor(instancia)",id_oferta:"eq."+id,order:"fecha_revision.desc"})
   ]);
-  return response({ok:true,offer:o,sender:sender[0]||null,media,careers,attachments:attachments.map(({ruta_archivo,...rest})=>rest)});
+  return response({ok:true,offer:o,sender:sender[0]||null,media,careers,revisions,attachments:attachments.map(({ruta_archivo,...rest})=>rest)});
  }
  if(action==="reviewer-attachment"){
   const actor=await actorFor(req,["Centro de Estudiantes","Secretaría Académica"]);if(!actor)return fail("Acceso de revisor requerido.",401);
@@ -534,18 +550,18 @@ Deno.serve(async req => {
  if(action==="reviewer-approved-save"){
   const actor=await actorFor(req,["Centro de Estudiantes","Secretaría Académica"]);if(!actor)return fail("Acceso de revisor requerido.",401);
   const id=numberId(input.offer_id),ids=careersInput(input.carreras),
-   title=safeField(input.titulo,200),description=safeField(input.descripcion,4000),requirements=safeField(input.requisitos,4000),
+   title=safeField(input.titulo,180),description=safeField(input.descripcion,4000),requirements=safeField(input.requisitos,4000),
    mediaType=safeField(input.medio_tipo,20),mediaValue=safeField(input.medio_valor,350);
-  if(!id||!title||!description||!requirements||!ids.length||!((mediaType==="Correo"&&validEmail(mediaValue))||(mediaType==="Enlace"&&/^https:\/\/[^\s]+$/i.test(mediaValue))))return fail("Datos de oferta incompletos.");
-  const found=await db("oferta_laboral",{select:"id_oferta",id_oferta:"eq."+id,id_remitente:"not.is.null",estado:"eq.Publicada",limit:1});
-  if(!found.length)return fail("Esta oferta ya no se puede editar.",409);
+  if(!id||!title||!description||!requirements||!ids.length||!((mediaType==="Correo"&&validEmail(mediaValue))||(mediaType==="Enlace"&&/^https:\/\/[^\s]+$/i.test(mediaValue))))
+   return fail("Completá título, descripción, requisitos, carreras y un correo o enlace HTTPS válido.");
   await checkCareers(ids);
-  await db("oferta_laboral",{id_oferta:"eq."+id,estado:"eq.Publicada"},{titulo:title,descripcion,requisitos:requirements},"PATCH");
-  await setOfferCareers(id,ids);
-  const med=(await db("medio_postulacion",{select:"id_medio",id_oferta:"eq."+id,limit:1}))[0];
-  if(med)await db("medio_postulacion",{id_medio:"eq."+med.id_medio},{tipo:mediaType,valor:mediaValue},"PATCH");
-  else await db("medio_postulacion",{},[{id_oferta:id,tipo:mediaType,valor:mediaValue}],"POST");
-  return response({ok:true,message:"Oferta aprobada actualizada sin modificar su vencimiento."});
+  // CU23: un error revierte toda la edición; preserva la fecha de vencimiento.
+  const updated=await db("rpc/actualizar_oferta_externa_aprobada",{},{
+   p_id_oferta:id,p_titulo:title,p_descripcion:description,p_requisitos:requirements,
+   p_carreras:ids,p_medio_tipo:mediaType,p_medio_valor:mediaValue
+  },"POST");
+  if(!updated.length)return fail("Esta oferta ya no está publicada y no puede modificarse.",409);
+  return response({ok:true,message:"Oferta actualizada correctamente. Se conservó su fecha de vencimiento."});
  }
  if(action==="reviewer-approved-drop"){
   const actor=await actorFor(req,["Centro de Estudiantes","Secretaría Académica"]);if(!actor)return fail("Acceso de revisor requerido.",401);
