@@ -1,15 +1,27 @@
+/* =====================================================
+   MÓDULO: APLICACIÓN PRINCIPAL (FRONTEND)
+   Centraliza la navegación, el acceso a la API y las
+   pantallas públicas de registro e inicio de sesión.
+   ===================================================== */
 'use strict';
+// Dirección pública del servicio backend desplegado en Supabase.
 const API = 'https://fxbhnyvlekulmuvvmrlr.supabase.co/functions/v1/bolsa-api';
 const state = {screen: 'inicio', offers: [], profile: null, token: ''};
 const $ = (selector) => document.querySelector(selector);
 const screens = new Set(['inicio', 'ofertas', 'registro', 'login', 'perfil', 'compartir', 'recuperar', 'restablecer']);
 const ROLES_PUEDEN_COMPARTIR = ['Empresa verificada','Secretaría Académica'];
 const canShareOffer = () => !getToken() || ROLES_PUEDEN_COMPARTIR.includes(state.profile?.tipo);
+// Recupera la sesión existente; no contiene la contraseña del usuario.
 const getToken = () => sessionStorage.getItem('bolsa-token') || localStorage.getItem('bolsa-token') || '';
 function clean(text) {return String(text ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function setAlert(id, message, success = false){const el = $(id);el.textContent = message;el.className = 'alert' + (success ? ' success' : '');}
 function clearAlert(id){const el=$(id);el.textContent='';el.className='alert hidden';}
 function setBusy(buttonId, busy, label){const el=$(buttonId);el.disabled=busy;el.textContent=busy?'Procesando...':label;}
+/* =====================================================
+   MÓDULO: COMUNICACIÓN CON EL BACKEND
+   Envía solicitudes HTTP con una acción y sus datos.
+   Adjunta el token únicamente cuando el módulo lo pide.
+   ===================================================== */
 async function request(action, extras={}, useToken=false){
   const headers = {'content-type':'application/json'};
   if (useToken && getToken()) headers.authorization = 'Bearer ' + getToken();
@@ -35,6 +47,11 @@ function closeMobileNavigation(){
   trigger.setAttribute('aria-label','Abrir menú de navegación');
  }
 }
+/* =====================================================
+   MÓDULO: NAVEGACIÓN Y CONTROL DE PANTALLAS
+   Cambia de vista y limita las páginas que requieren sesión.
+   La autorización definitiva siempre se valida en el backend.
+   ===================================================== */
 function navigate(target,fromHistory=false){
  const route=String(target||'inicio').replace(/^#/,'').split('/');
  let to=route[0],section=route[1]||'inicio';
@@ -88,6 +105,7 @@ function updateHeader(){
  const panel=$('#company-share-panel');
  if(panel)panel.classList.toggle('hidden',!shareVisible);
 }
+// Solicita al backend las ofertas consultables por la sesión actual.
 async function loadOffers(){
  if(!getToken()){navigate('login');return;}
  const token=getToken();
@@ -112,6 +130,7 @@ async function loadOffers(){
   status.textContent=err.message+' Intentá nuevamente.';
  }
 }
+// Aplica los filtros visibles por carrera y tipo a las ofertas recibidas.
 function renderOffers(){
  const type=$('#filter-type').value,career=$('#filter-career').value;
  const results=state.offers.filter(o=>(!type||o.tipo===type)&&(!career||(o.carreras||[]).some(c=>String(c.id_carrera)===career)));
@@ -127,6 +146,7 @@ function renderOffers(){
  return `<article class="offer"><div class="offer-meta"><span class="pill">${clean(o.tipo)}</span>${expired?'<span class="pill expired">Vencida</span>':''}</div><h3>${clean(o.titulo)}</h3><p>${clean(o.descripcion).slice(0,240)}</p><p><strong>Carrera(s):</strong> ${(o.carreras||[]).map(c=>clean(c.nombre)).join(', ')||'Todas'}</p><p><strong>Vigencia:</strong> ${o.vigencia_indefinida?'Indefinida':clean(o.fecha_vencimiento||'Sin definir')}</p><button class="btn btn-secondary" type="button" data-open-offer="${o.id_oferta}">Ver detalle</button></article>`;
  }).join('');
 }
+// Recupera el perfil y activa el panel correspondiente al rol autenticado.
 async function loadProfile(){
  const card=$('#profile-card');
  if(!getToken()){navigate('login');return;}
@@ -177,6 +197,11 @@ $('#toggle-login-password').addEventListener('click',()=>{
  toggle.textContent=showing?'Ocultar contraseña':'Mostrar contraseña';
  toggle.setAttribute('aria-pressed',String(showing));
 });
+/* =====================================================
+   CU01 - REGISTRO DE ESTUDIANTES
+   Comprueba el formulario y solicita el registro al backend.
+   Allí se verifica la matrícula contra el padrón simulado.
+   ===================================================== */
 $('#register-form').addEventListener('submit',async e=>{
  e.preventDefault();clearAlert('#register-alert');
  const form=e.currentTarget;const input=Object.fromEntries(new FormData(form));
@@ -197,12 +222,21 @@ $('#register-form').addEventListener('submit',async e=>{
  catch(err){setAlert('#register-alert',err.message);}
  finally{setBusy('#submit-register',false,'Crear cuenta →');}
 });
+/* =====================================================
+   MÓDULO: INICIO DE SESIÓN (CU02)
+   1. Evita recargar la página al enviar el formulario.
+   2. Obtiene el usuario y la contraseña ingresados.
+   3. Solicita al backend la validación de credenciales.
+   4. Guarda el token recibido y abre el panel del usuario.
+   ===================================================== */
 $('#login-form').addEventListener('submit',async e=>{
  e.preventDefault();clearAlert('#login-alert');
+ // Se leen los datos del formulario sin guardar la contraseña permanentemente.
  const input=Object.fromEntries(new FormData(e.currentTarget));
  input.usuario=String(input.usuario||'').trim().toLowerCase();
  if(!input.usuario||!input.password){setAlert('#login-alert','Ingresá tu usuario y contraseña.');return;}
  setBusy('#submit-login',true,'Ingresar →');
+ // La validación real de usuario, contraseña y habilitación ocurre en Supabase.
  try{const data=await request('login',input);localStorage.removeItem('bolsa-token');sessionStorage.removeItem('bolsa-token');if($('#remember').checked)localStorage.setItem('bolsa-token',data.token);else sessionStorage.setItem('bolsa-token',data.token);state.profile=data.profile;$('#login-password').value='';updateHeader();navigate('perfil');}
  catch(err){
   const message=err.message==='Usuario o contraseña incorrectos.'
@@ -213,6 +247,10 @@ $('#login-form').addEventListener('submit',async e=>{
  finally{setBusy('#submit-login',false,'Ingresar →');}
 });
 
+/* =====================================================
+   CU18 - RECUPERACIÓN DE CONTRASEÑA
+   Solicita al backend un enlace de recuperación por correo.
+   ===================================================== */
 $('#recover-form').addEventListener('submit',async e=>{
  e.preventDefault();clearAlert('#recover-alert');
  const correo=$('#recover-email').value.trim().toLowerCase();
@@ -222,6 +260,7 @@ $('#recover-form').addEventListener('submit',async e=>{
  catch(error){setAlert('#recover-alert',error.message);}
  finally{button.disabled=false;button.textContent='Enviar enlace';}
 });
+// Utiliza el token temporal del enlace para establecer una nueva contraseña.
 $('#reset-form').addEventListener('submit',async e=>{
  e.preventDefault();clearAlert('#reset-alert');
  const token=new URLSearchParams(location.search).get('token')||'';
