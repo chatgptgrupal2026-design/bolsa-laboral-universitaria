@@ -1,3 +1,4 @@
+import nodemailer from "npm:nodemailer@9.1.1";
 // Bolsa de Trabajo Universitaria · CU01/CU02 · versión académica
 const BASE = Deno.env.get("SUPABASE_URL") || "";
 const ADMIN_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -88,18 +89,33 @@ async function userProfile(user) {
 
 
 
+// Envíos transaccionales vía Gmail SMTP/TLS. Claves exclusivamente en Edge Function Secrets.
+function gmailConfigured(){
+ const user=Deno.env.get("GMAIL_USER")||"";
+ const password=(Deno.env.get("GMAIL_APP_PASSWORD")||"").replace(/\\s+/g,"");
+ return validEmail(user)&&password.length===16;
+}
 async function mail(to,subject,body){
- const key=Deno.env.get("RESEND_API_KEY"),from=Deno.env.get("RESEND_FROM");
- if(!key||!from)return false;
+ const user=(Deno.env.get("GMAIL_USER")||"").trim();
+ const pass=(Deno.env.get("GMAIL_APP_PASSWORD")||"").replace(/\\s+/g,"");
+ if(!gmailConfigured()||!validEmail(to))return false;
  try{
-  const res=await fetch("https://api.resend.com/emails",{
-   method:"POST",
-   headers:{"authorization":"Bearer "+key,"content-type":"application/json","user-agent":"bolsa-universitaria/1.0"},
-   body:JSON.stringify({from,to:[to],subject,text:body})
+  const transporter=nodemailer.createTransport({
+   host:"smtp.gmail.com",port:465,secure:true,
+   auth:{user,pass},
+   connectionTimeout:10000,greetingTimeout:10000,socketTimeout:15000,
+   pool:false
   });
-  if(!res.ok)console.error("Error al notificar correo",res.status);
-  return res.ok;
- }catch(e){console.error("Servidor de correo no disponible.");return false;}
+  const info=await transporter.sendMail({
+   from:{name:"Bolsa Laboral Universitaria",address:user},
+   to,subject,text:body
+  });
+  return Array.isArray(info.accepted)&&info.accepted.some(a=>a.toLowerCase()===to.toLowerCase());
+ }catch(e){
+  // No registrar claves SMTP, tokens ni el contenido del mensaje.
+  console.error("No se pudo enviar el correo con Gmail SMTP.");
+  return false;
+ }
 }
 async function sha256B64(raw){
  const result=new Uint8Array(await crypto.subtle.digest("SHA-256",textEncoder.encode(raw)));
@@ -754,7 +770,7 @@ Deno.serve(async req => {
  if(action==="password-reset-request"){
   const email=safeField(input.correo,200).toLowerCase();
   if(!validEmail(email))return fail("Ingresá un correo válido.");
-  if(!Deno.env.get("RESEND_API_KEY")||!Deno.env.get("RESEND_FROM"))return fail("La recuperación por correo aún no está configurada. Consultá con Secretaría Académica.",503);
+  if(!gmailConfigured())return fail("La recuperación por correo aún no está configurada. Consultá con Secretaría Académica.",503);
   const generic="Si el correo está registrado, recibirás un enlace para restablecer la contraseña.";
   const users=await db("usuario",{select:"id_usuario,correo,habilitado",correo:"eq."+email,limit:1});
   const user=users[0];
