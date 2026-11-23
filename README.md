@@ -5,6 +5,12 @@ Proyecto académico de **Ingeniería del Software 2 — Facultad de Ciencias y T
 ## Estado actual
 Aplicación web con inicio, registro e inicio de sesión, consulta y filtrado de ofertas **solo para usuarios autenticados** y paneles por rol (estudiante, empresa, revisores y Secretaría Académica). Los 24 casos de uso están documentados en [REQUERIMIENTOS.md](./REQUERIMIENTOS.md), con indicación explícita de cuáles requieren pruebas o configuración adicional.
 
+## Reporte con totalizadores para la defensa (23/11/2026)
+
+**Secretaría Académica → Reporte de ofertas** incorpora un reporte administrativo de solo lectura basado en datos reales de PostgreSQL. Incluye filtros por estado y tipo, cantidad de ofertas, cantidad de postulaciones, resumen por estado, total general y tabla detallada. Permite **Exportar CSV** para abrirlo en Excel. Se usa la acción protegida `secretary-report` de `bolsa-api`; estudiantes y empresas no pueden acceder. No se agregaron tablas ni se modificaron datos del DER.
+
+Para demostrarlo, ingresar con una cuenta habilitada de **Secretaría Académica**, abrir **Reporte de ofertas**, cambiar el filtro de estado y verificar que los totalizadores cambian. Volver a todos los estados y descargar el CSV. Las pruebas automáticas comprueban cálculos de totalizadores y el rechazo de solicitudes anónimas; sigue pendiente la validación visual autenticada en navegador.
+
 ## Arquitectura
 - **Frontend:** HTML, CSS y JavaScript, sitio estático para Vercel (sin build). Diseño índigo tecnológico con navegación responsive.
 - **Backend:** Supabase Edge Function `bolsa-api`.
