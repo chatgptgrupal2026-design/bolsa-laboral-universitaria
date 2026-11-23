@@ -24,5 +24,7 @@ jobs:
           node --check workspace.js
       - name: Verificar frontend responsive y tema índigo
         run: node tests/front-design.mjs
+      - name: Probar envío por Gmail con SMTP simulado (sin credenciales reales)
+        run: node tests/gmail-mail.mjs
       - name: Probar consultas públicas y permisos
         run: node tests/smoke.mjs
