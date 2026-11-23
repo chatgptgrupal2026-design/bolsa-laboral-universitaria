@@ -1,4 +1,8 @@
-/* Portales de empresas, revisión académica y oferta sin registro — CU10-CU16, CU21-CU24 */
+/* =====================================================
+   MÓDULO: EMPRESAS, REVISIÓN Y SECRETARÍA (FRONTEND)
+   Administra las pantallas y formularios de cada rol.
+   Usa la API para guardar ofertas y registrar revisiones.
+   ===================================================== *//* Portales de empresas, revisión académica y oferta sin registro — CU10-CU16, CU21-CU24 */
 (function(){
 'use strict';
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -16,6 +20,7 @@ function message(text,error=false){
  const m=document.getElementById('portal-message');
  if(m){m.className='alert'+(error?'':' success');m.textContent=text;m.scrollIntoView({block:'nearest',behavior:'smooth'});}
 }
+// Recupera el catálogo de carreras para asociarlas con las ofertas.
 async function ensureCareers(){
  if(careers.length)return careers;
  const r=await request('careers');
@@ -33,6 +38,7 @@ function chosenCareers(container){
  return [...document.querySelectorAll('#'+container+' input[type="checkbox"]:checked')]
   .map(input=>Number(input.value)).filter(Number.isSafeInteger);
 }
+// CU14: muestra carreras disponibles en el formulario de empresa externa.
 async function populateShareCareers(){
  if(!canShareOffer())return;
  const container=document.getElementById('share-career-options');
@@ -45,6 +51,7 @@ async function populateShareCareers(){
   container.innerHTML='<p class="alert">'+E(err.message)+'</p>';
  }
 }
+// Consulta la información del panel según el rol de la sesión activa.
 async function load(){
  if(!root()||!getToken())return;
  try{
@@ -60,6 +67,7 @@ async function load(){
   render();
  }catch(e){root().innerHTML='<div class="alert">'+E(e.message)+'</div>';}
 }
+// Define las opciones visibles según empresa, revisor o Secretaría.
 const menuForRole=()=>isCompany()?
  [
  {id:'inicio',label:'Inicio',icon:'inicio',description:'Información general y accesos rápidos de tu empresa.'},
@@ -95,6 +103,7 @@ function select(nextTab){
 }
 function clear(){role='';tab='inicio';view=null;editingOffer=null;reviewOffer=null;selectedApplicants=null;reportData=null;reportLoading=false;reportFilters={estado:'',tipo:''};window._portalForm='';if(root())root().innerHTML='';}
 function go(t){navigate('perfil/'+t);}
+// Presenta el resumen inicial de ofertas y gestiones del usuario.
 function portalHome(){
  const label=isCompany()?'Gestión de empresa':'Gestión de revisión';
  const stats=isCompany()?[
@@ -123,6 +132,7 @@ function portalHome(){
  '<div class="dashboard-quick-grid">'+shortcuts.map(([id,name,description,icon])=>
  '<button class="dashboard-quick-card" type="button" data-portal-tab="'+E(id)+'"><span class="quick-icon">'+window.BolsaWorkspace.icon(icon)+'</span><strong>'+E(name)+'</strong><small>'+E(description)+'</small><span class="quick-action">Abrir sección →</span></button>').join('')+'</div>';
 }
+// Construye el panel lateral y la pantalla seleccionada por el usuario.
 function render(){
  if(!root()||!view)return;
  const items=menuForRole();
@@ -155,6 +165,11 @@ function render(){
  if(tab==='seguridad')area().innerHTML=security();
 }
 // Reporte administrativo de lectura, sin cambios de datos ni permisos a otros roles.
+/* =====================================================
+   MÓDULO: REPORTE DE OFERTAS (SECRETARÍA)
+   Solicita información agregada a la API; es de solo lectura.
+   Los permisos se verifican en el backend antes de consultar.
+   ===================================================== */
 async function loadReport(){
  if(!isSecretary()||!getToken()||reportLoading)return;
  reportLoading=true;
@@ -167,6 +182,7 @@ async function loadReport(){
   if(tab==='reportes'&&area())area().innerHTML='<div class="alert">'+E(err.message)+'</div><button type="button" class="btn btn-secondary" data-report-refresh>Reintentar</button>';
  }finally{reportLoading=false;}
 }
+// Filtra las ofertas recuperadas por estado y tipo de oportunidad.
 function reportItems(){
  const all=reportData?.items||[];
  return all.filter(x=>(!reportFilters.estado||x.estado===reportFilters.estado)&&
@@ -177,6 +193,7 @@ function reportDate(value){
  const parts=String(value).slice(0,10).split('-');
  return parts.length===3?parts[2]+'/'+parts[1]+'/'+parts[0]:'—';
 }
+// Calcula totalizadores en pantalla y genera las tablas del reporte.
 function reportHtml(){
  if(!reportData)return '<div class="status-message">Consultando ofertas y postulaciones...</div>';
  const all=reportData.items||[];
@@ -207,6 +224,7 @@ function reportHtml(){
  '</tbody><tfoot><tr><th colspan="5" scope="row">TOTAL · '+items.length+' oferta(s)</th><td class="report-num">'+total+'</td></tr></tfoot></table></div>'+
  '<p class="report-note">Las postulaciones incluyen todos los estados, incluso retiros. El reporte es de solo lectura.</p></section>';
 }
+// Prepara un archivo CSV compatible con Excel y el filtro actual.
 function downloadReportCsv(){
  if(!reportData)return;
  const rows=reportItems();
@@ -219,6 +237,10 @@ function downloadReportCsv(){
  const a=document.createElement('a');a.href=url;a.download='Reporte_Ofertas_Bolsa_Laboral.csv';document.body.appendChild(a);a.click();a.remove();
  setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
+/* =====================================================
+   CU24 - DATOS DE LA EMPRESA VERIFICADA
+   Permite consultar y modificar los datos propios de la empresa.
+   ===================================================== */
 function company(){
  const c=view.company||{};
  return '<h2>Perfil de mi empresa</h2><p class="muted">El RUC fue verificado por Secretaría Académica y no puede modificarse.</p>'+
@@ -232,6 +254,10 @@ function careersPicker(chosen=[]){
  '<div class="career-options">'+careerCheckboxes(careers,chosen)+'</div>'+
  '<small>Marcá al menos una carrera. Podés elegir varias.</small></fieldset>';
 }
+/* =====================================================
+   CU10-CU12 - MANTENIMIENTO DE OFERTAS
+   Presenta los formularios de publicación, edición y baja.
+   ===================================================== */
 function offerForm(o={}){
  const edit=Boolean(o.id_oferta);
  const indefinite=o.vigencia_indefinida??true;
@@ -271,6 +297,7 @@ function applicantProfileHtml(p){
  '<h4>Cursos y certificaciones</h4>'+list(p.trainings,x=>'<article><strong>'+E(x.nombre||'Formación')+'</strong><small>'+E(x.tipo||'')+(x.institucion?' · '+E(x.institucion):'')+(x.anio?' · '+E(x.anio):'')+'</small></article>')+
  '</section>';
 }
+// CU13: muestra postulantes de la oferta sin acceder a otras empresas.
 function applicantsHtml(){
  const a=selectedApplicants;
  return '<section class="student-collection"><h3>Postulantes: '+E(a.title)+'</h3>'+
@@ -280,6 +307,10 @@ function applicantsHtml(){
   (p.cv?'<button type="button" class="btn btn-secondary" data-applicant-cv="'+p.id_postulacion+'">Ver CV</button>':'<span class="muted">Sin CV</span>')+'</div></article>').join('')+'</div>':'<div class="status-message">Esta oferta aún no tiene postulantes.</div>')+
  applicantProfileHtml(selectedProfile)+'</section>';
 }
+/* =====================================================
+   CU15-CU16 Y CU23 - REVISIÓN DE OFERTAS EXTERNAS
+   Lista pendientes, aprobadas e historial de decisiones.
+   ===================================================== */
 function reviewList(approved,historical=false){
  const items=historical?view.history:(approved?view.approved:view.pending);
  let html='<h2>'+(historical?'Historial de ofertas externas':approved?'Ofertas aprobadas de empresas no verificadas':'Ofertas pendientes')+'</h2>'+
@@ -290,6 +321,7 @@ function reviewList(approved,historical=false){
  if(reviewOffer)html+=reviewDetail(approved,historical);
  return html;
 }
+// Despliega la oferta y los botones de aprobar o rechazar según su estado.
 function reviewDetail(approved,historical=false){
  const p=reviewOffer,o=p.offer,c=p.sender||{},media=p.media?.[0]||{};
  return '<div class="student-collection"><h3>Detalle: '+E(o.titulo)+'</h3>'+
@@ -311,6 +343,7 @@ function reviewDetail(approved,historical=false){
  '<div class="inline-actions"><button class="btn btn-primary" data-review-approve="'+o.id_oferta+'">Aprobar y publicar</button><button class="btn btn-secondary danger" data-review-reject="'+o.id_oferta+'">Rechazar</button></div>')+
  '</div>';
 }
+// CU21: listado y mantenimiento de empresas verificadas por Secretaría.
 function adminCompanies(){
  const list=view.companies||[];
  return '<h2>Empresas verificadas</h2><p class="muted">Secretaría Académica registra y habilita o deshabilita a las empresas.</p>'+
@@ -318,6 +351,7 @@ function adminCompanies(){
  (list.length?'<div class="compact-list">'+list.map(c=>'<div class="compact-item"><div><strong>'+E(c.razon_social)+'</strong><small>RUC '+E(c.ruc)+' · '+E(c.usuario?.nombre_usuario)+' · '+(c.habilitada?'Habilitada':'Deshabilitada')+'</small><small>Contacto: '+E(c.persona_contacto||'No informado')+' · '+E(c.correo_contacto||'Sin correo')+' · '+E(c.telefono||'Sin teléfono')+'</small><p class="admin-company-description">'+E(c.descripcion||'Sin descripción de empresa')+'</p></div><button class="text-button" data-edit-company="'+c.id_empresa+'">Modificar</button></div>').join('')+'</div>':'<div class="status-message">No hay empresas verificadas.</div>')+
  (window._portalForm?window._portalForm:'');
 }
+// CU22: administración de usuarios revisores y sus instancias.
 function adminReviewers(){
  const list=view.reviewers||[];
  return '<h2>Usuarios revisores</h2><p class="muted">Secretaría Académica administra los usuarios del Centro de Estudiantes y de Secretaría.</p>'+
@@ -345,6 +379,7 @@ function security(){
  input('current_password','Contraseña actual','','password',true)+input('new_password','Nueva contraseña','','password',true)+input('repeat_password','Confirmar nueva contraseña','','password',true)+
  '<button class="btn btn-primary" type="submit">Cambiar contraseña</button></form>';
 }
+// Función compartida: envía la acción al backend, recarga y muestra el resultado.
 async function perform(action,payload){
  try{
   const resp=await request(action,payload,true);
@@ -359,6 +394,7 @@ async function perform(action,payload){
   return true;
  }catch(e){message(e.message,true);return false;}
 }
+// Convierte un adjunto permitido a base64 para su envío controlado a la API.
 async function readFile(file,limits=['pdf','png','jpg','jpeg']){
  if(!file)return {};
  if(file.size>5242880||!limits.some(ext=>file.name.toLowerCase().endsWith('.'+ext)))throw new Error('Adjunto no permitido o superior a 5 MB.');
@@ -404,6 +440,7 @@ document.addEventListener('click',async e=>{
  }
  const attachment=e.target.closest('[data-review-attachment]');
  if(attachment){const pop=window.open('about:blank','_blank');try{const r=await request('reviewer-attachment',{attachment_id:Number(attachment.dataset.reviewAttachment)},true);if(pop)pop.location.href=r.url;else message('Enlace del adjunto (copiar y abrir): '+r.url);}catch(err){pop?.close();message(err.message,true);}return;}
+// CU16 - APROBAR: solicita confirmación y envía la decisión al backend.
  const approve=e.target.closest('[data-review-approve]');
  if(approve){
   if(await window.BolsaUI.confirm('La oferta será publicada por 14 días y podrá ser consultada por usuarios autorizados.',{title:'Aprobar oferta laboral',confirmLabel:'Aprobar y publicar'})){
@@ -411,6 +448,7 @@ document.addEventListener('click',async e=>{
    if(ok){reviewOffer=null;render();}
   }return;
  }
+// CU16 - RECHAZAR: obliga a ingresar un motivo antes de guardar la decisión.
  const reject=e.target.closest('[data-review-reject]');
  if(reject){
   const motivo=await window.BolsaUI.reason('Explicá por qué se rechaza la oferta. Este motivo quedará guardado en el historial.',{title:'Rechazar oferta laboral'});
@@ -419,6 +457,7 @@ document.addEventListener('click',async e=>{
    if(ok){reviewOffer=null;render();}
   }return;
  }
+// CU23: permite dar de baja una oferta previamente aprobada.
  const reviewDrop=e.target.closest('[data-review-drop]');
  if(reviewDrop){
   if(await window.BolsaUI.confirm('La oferta dejará de estar publicada, pero seguirá en el historial de revisiones.',{title:'Dar de baja oferta',confirmLabel:'Dar de baja',danger:true})){
@@ -434,6 +473,7 @@ document.addEventListener('click',async e=>{
  if(editR){const row=view.reviewers.find(x=>String(x.id_revisor)===editR.dataset.editReviewer);window._portalForm=adminForm('reviewer',row);render();return;}
  if(e.target.closest('[data-admin-cancel]')){window._portalForm='';render();}
 });
+// Actualiza filtros y totalizadores del reporte al cambiar una selección.
 document.addEventListener('change',e=>{
  if(!isSecretary()||tab!=='reportes'||!reportData)return;
  if(e.target.id==='report-status')reportFilters.estado=e.target.value;
@@ -441,6 +481,7 @@ document.addEventListener('change',e=>{
  else return;
  if(area())area().innerHTML=reportHtml();
 });
+// Procesa formularios de empresas, ofertas, revisores y cambio de contraseña.
 document.addEventListener('submit',async e=>{
  const f=e.target;
  if(f.id==='share-offer-form'){
