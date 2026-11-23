@@ -1,4 +1,4 @@
-import nodemailer from "npm:nodemailer@9.1.1";
+import nodemailer from "npm:nodemailer@10.6.1";
 // Bolsa de Trabajo Universitaria · CU01/CU02 · versión académica
 const BASE = Deno.env.get("SUPABASE_URL") || "";
 const ADMIN_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -92,12 +92,12 @@ async function userProfile(user) {
 // Envíos transaccionales vía Gmail SMTP/TLS. Claves exclusivamente en Edge Function Secrets.
 function gmailConfigured(){
  const user=Deno.env.get("GMAIL_USER")||"";
- const password=(Deno.env.get("GMAIL_APP_PASSWORD")||"").replace(/\\s+/g,"");
+ const password=(Deno.env.get("GMAIL_APP_PASSWORD")||"").replace(/\s+/g,"");
  return validEmail(user)&&password.length===16;
 }
 async function mail(to,subject,body){
  const user=(Deno.env.get("GMAIL_USER")||"").trim();
- const pass=(Deno.env.get("GMAIL_APP_PASSWORD")||"").replace(/\\s+/g,"");
+ const pass=(Deno.env.get("GMAIL_APP_PASSWORD")||"").replace(/\s+/g,"");
  if(!gmailConfigured()||!validEmail(to))return false;
  try{
   const transporter=nodemailer.createTransport({
