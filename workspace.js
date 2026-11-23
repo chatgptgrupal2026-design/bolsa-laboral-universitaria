@@ -1,7 +1,12 @@
-/* Diseño compartido: menú lateral y paneles independientes por rol. */
+/* =====================================================
+   MÓDULO: ESPACIO DE TRABAJO COMPARTIDO (FRONTEND)
+   Construye el menú lateral y los paneles según el rol.
+   Reutiliza el mismo diseño para estudiante, empresa y revisores.
+   ===================================================== *//* Diseño compartido: menú lateral y paneles independientes por rol. */
 (function(){
 'use strict';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Íconos SVG que identifican cada sección del panel.
 const paths={
  inicio:'<path d="m3 10 9-7 9 7"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-8h6v8"/>',
  academico:'<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/>',
@@ -23,6 +28,7 @@ const paths={
 function icon(name){
  return '<svg class="dash-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(paths[name]||paths.inicio)+'</svg>';
 }
+// Genera la estructura visual del menú, encabezado y área de contenido.
 function shell({items,active,person,identifier,role,title,description,contentId,messageId,routeName='perfil'}){
  const selected=items.find(x=>x.id===active)||items[0];
  const heading=title||selected.label;
@@ -49,10 +55,12 @@ function shell({items,active,person,identifier,role,title,description,contentId,
   '</section>'+
  '</div>';
 }
+// Cierra el menú lateral cuando se navega o se presiona Escape.
 function closeDashboardMenu(){
  document.getElementById('dashboard-sidebar')?.classList.remove('is-open');
  document.querySelector('[data-dashboard-menu]')?.setAttribute('aria-expanded','false');
 }
+// Atiende los clics del menú y delega la navegación a app.js.
 document.addEventListener('click',e=>{
  if(e.target.closest('[data-dashboard-scrim]')){closeDashboardMenu();return;}
  const toggle=e.target.closest('[data-dashboard-menu]');
