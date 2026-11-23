@@ -8,7 +8,7 @@
 El backend en `supabase/functions/bolsa-api/index.ts` utiliza ahora **Gmail SMTP + Nodemailer**, no Resend. Se conservan estas funciones:
 
 1. **Recuperación de contraseña:** enlace válido durante 30 minutos, desde `#recuperar`.
-2. **Alta de empresa verificada:** correo al administrador con usuario y contraseña temporal; si el envío falla, Secretaría obtiene la contraseña temporal solo en la respuesta de alta.
+2. **Alta de empresa verificada:** correo al contacto de empresa registrado con usuario y contraseña temporal; si el envío falla, Secretaría obtiene la contraseña temporal solo en la respuesta de alta.
 3. **Alta de revisor:** igual que el alta de empresa.
 4. **Rechazo de ofertas externas:** notificación con el motivo registrado; la revisión se conserva aunque Gmail falle.
 
