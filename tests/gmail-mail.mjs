@@ -12,7 +12,7 @@ const env=new Map(),transportCalls=[],messages=[],errorLog=[];
 let shouldReject=false,accepted=[];
 const sandbox={
  Deno:{env:{get:key=>env.get(key)}},
- validEmail:v=>/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(v)),
+ validEmail:v=>typeof v==="string" && v.includes("@") && v.includes(".") && !v.includes(" "),
  nodemailer:{createTransport:options=>{
   transportCalls.push(options);
   return {sendMail:async message=>{
