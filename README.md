@@ -73,3 +73,7 @@ El catálogo y el detalle de ofertas requieren una sesión válida, con usuario 
 La página principal incluye **«Compártenos tu oferta laboral»** para empresas **sin usuario y sin iniciar sesión**. Pueden remitir datos de contacto, oferta, carreras, medio externo de postulación y adjunto opcional para revisión. La oferta queda **Pendiente de aprobación**; los revisores del Centro de Estudiantes o Secretaría deciden su publicación y, si la aprueban, la vigencia será de 14 días. Esto **no hace público el catálogo**, que sigue requiriendo sesión válida.
 
 Se verificó un envío HTTP anónimo de prueba (201) y sus registros en PostgreSQL; luego se borraron los datos QA. Antispam básico por campo trampa; queda recomendado añadir protección avanzada antes de abrir el formulario a tráfico masivo.
+
+## Correos automáticos — Gmail SMTP
+
+El backend tiene preparado el envío de emails transaccionales mediante Gmail SMTP (Nodemailer y TLS, puerto 465) para recuperación de contraseñas, creación de empresas y revisores, y rechazo de ofertas. **Pendiente de activación real:** cargar `GMAIL_USER` y `GMAIL_APP_PASSWORD` como secretos privados en Supabase. No es necesario comprar dominio; la aplicación web permanece en Vercel. Las pruebas en CI simulan SMTP, no envían correos. Instrucciones en [docs/CONFIGURAR_CORREO_GMAIL.md](./docs/CONFIGURAR_CORREO_GMAIL.md).
