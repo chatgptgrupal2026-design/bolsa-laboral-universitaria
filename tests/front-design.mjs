@@ -1,5 +1,6 @@
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const theme=readFileSync(new URL('../theme-indigo.css',import.meta.url),'utf8');
@@ -102,3 +103,40 @@ assert.match(feedback,/function reason\(/);
 assert.match(theme,/\.review-audit/);
 assert.match(theme,/\.offer-flyer-image/);
 console.log('OK: historial, flyer privado, edición transaccional y datos completos de empresa.');
+
+assert.match(portal,/id:'reportes',label:'Reporte de ofertas'/);
+assert.match(workspace,/reportes:'<rect/);
+assert.match(theme,/\\.report-table/);
+assert.match(backend,/if\\(action==="secretary-report"\\)\\{[\\s\\S]*?actorFor\\(req,\\["Secretaría Académica"\\]\\)/);
+assert.match(backend,/reportAll\\("postulacion"/);
+assert.match(portal,/function downloadReportCsv\\(/);
+const start=portal.indexOf('function reportItems(){'),end=portal.indexOf('function company(){',start);
+assert.ok(start>=0 && end>start,'Deben existir totalizadores de reporte.');
+const testContext={
+ reportData:{items:[
+  {id_oferta:1,titulo:'Oferta de desarrollo',empresa:'Empresa A',estado:'Publicada',tipo:'Empleo',fecha:'2026-11-20',postulaciones:3},
+  {id_oferta:2,titulo:'Oferta de pasantía',empresa:'Empresa B',estado:'Rechazada',tipo:'Pasantía',fecha:'2026-11-19',postulaciones:1}
+ ]},
+ reportFilters:{estado:'',tipo:''},
+ E:v=>String(v??''),
+ option:(id,name)=>'<option value="'+id+'">'+name+'</option>'
+};
+vm.createContext(testContext);
+vm.runInContext(portal.slice(start,end)+'\n globalThis.testReport={reportHtml,reportItems};',testContext);
+const full=testContext.testReport.reportHtml();
+assert.match(full,/<strong>2<\\/strong>/);
+assert.match(full,/<strong>4<\\/strong>/);
+assert.match(full,/TOTAL GENERAL/);
+assert.match(full,/Oferta de desarrollo/);
+assert.match(full,/Oferta de pasantía/);
+testContext.reportFilters.estado='Publicada';
+const filtered=testContext.testReport.reportHtml();
+assert.equal(testContext.testReport.reportItems().length,1);
+assert.match(filtered,/<strong>1<\\/strong>/);
+assert.match(filtered,/<strong>3<\\/strong>/);
+assert.doesNotMatch(filtered,/Oferta de pasantía/);
+testContext.reportFilters.estado='Vencida';
+const empty=testContext.testReport.reportHtml();
+assert.match(empty,/No se encontraron ofertas con estos filtros/);
+assert.match(empty,/<strong>0<\\/strong>/);
+console.log('OK: reporte administrativo con acceso restringido, filtros y totalizadores coherentes.');
