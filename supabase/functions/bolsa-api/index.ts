@@ -1,3 +1,8 @@
+/* =====================================================
+   BACKEND: BOLSA LABORAL UNIVERSITARIA
+   Supabase Edge Function: recibe las acciones del frontend,
+   valida permisos y aplica reglas antes de consultar PostgreSQL.
+   ===================================================== */
 import nodemailer from "npm:nodemailer@10.6.1";
 // Bolsa de Trabajo Universitaria · CU01/CU02 · versión académica
 const BASE = Deno.env.get("SUPABASE_URL") || "";
@@ -31,15 +36,18 @@ function equal(a,b) {
  let z=0;for(let i=0;i<a.length;i++)z |= a[i]^b[i];
  return z===0;
 }
+// Firma la sesión para impedir cambios no autorizados en el token.
 async function hmac(data) {
   const key = await crypto.subtle.importKey("raw", textEncoder.encode("bolsa-v1-session:"+ADMIN_KEY), {name:"HMAC",hash:"SHA-256"},false,["sign"]);
   return new Uint8Array(await crypto.subtle.sign("HMAC",key,textEncoder.encode(data)));
 }
+// Crea el token de sesión firmado con fecha de vencimiento.
 async function makeSession(user) {
  const claims = { id: user.id_usuario, tipo: user.tipo_usuario, exp: Math.floor(Date.now()/1000)+8*3600 };
  const encoded = b64(textEncoder.encode(JSON.stringify(claims)));
  return encoded+"."+b64(await hmac(encoded));
 }
+// Verifica firma y vigencia del token enviado por el navegador.
 async function sessionFrom(req) {
  const header = req.headers.get("authorization") || "";
  const token = header.startsWith("Bearer ") ? header.slice(7):"";
@@ -52,12 +60,14 @@ async function sessionFrom(req) {
   return claims;
  } catch {return null;}
 }
+// Genera hashes PBKDF2 con sal aleatoria; no guarda contraseñas planas.
 async function passHash(password) {
  const salt = crypto.getRandomValues(new Uint8Array(16));
  const key = await crypto.subtle.importKey("raw",textEncoder.encode(password),"PBKDF2",false,["deriveBits"]);
  const hash = new Uint8Array(await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:180000,hash:"SHA-256"},key,256));
  return "pbkdf2_sha256$180000$"+b64(salt)+"$"+b64(hash);
 }
+// Comprueba la contraseña ingresada contra el hash registrado.
 async function matchPass(password, stored) {
  try {
   const [type,iterations,salt,expected] = stored.split("$");
@@ -67,6 +77,11 @@ async function matchPass(password, stored) {
   return equal(hash,unb64(expected));
  } catch { return false; }
 }
+/* =====================================================
+   ACCESO A POSTGRESQL
+   Función reutilizable para consultas REST con la clave de servicio
+   guardada en los secretos del backend, nunca en JavaScript público.
+   ===================================================== */
 async function db(table, filters = {}, body = null, method="GET") {
  const url = new URL(BASE+"/rest/v1/"+table);
  for(const [k,v] of Object.entries(filters)) url.searchParams.set(k,String(v));
@@ -78,6 +93,7 @@ async function db(table, filters = {}, body = null, method="GET") {
  }
  return data;
 }
+// Recupera los datos básicos del perfil según el rol.
 async function userProfile(user) {
  const result={usuario:user.nombre_usuario, tipo:user.tipo_usuario};
  if(user.tipo_usuario==="Estudiante"){
@@ -90,6 +106,11 @@ async function userProfile(user) {
 
 
 // Envíos transaccionales vía Gmail SMTP/TLS. Claves exclusivamente en Edge Function Secrets.
+/* =====================================================
+   CORREO AUTOMÁTICO: GMAIL SMTP
+   Utiliza secretos privados GMAIL_USER y GMAIL_APP_PASSWORD.
+   Prepara notificaciones y enlaces de recuperación.
+   ===================================================== */
 function gmailConfigured(){
  const user=Deno.env.get("GMAIL_USER")||"";
  const password=(Deno.env.get("GMAIL_APP_PASSWORD")||"").replace(/\s+/g,"");
@@ -122,6 +143,7 @@ async function sha256B64(raw){
  return b64(result);
 }
 
+// Valida rol, sesión y habilitación de empresas o revisores.
 async function actorFor(req,acceptedRoles){
  const session=await sessionFrom(req);if(!session)return null;
  const found=await db("usuario",{select:"id_usuario,nombre_usuario,tipo_usuario,correo,habilitado",id_usuario:"eq."+session.id,limit:1});
@@ -141,6 +163,7 @@ function validEmail(value){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);}
 function pyDate(){
  return new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Asuncion",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 }
+// Comprueba que existan las carreras elegidas en la base de datos.
 async function checkCareers(ids){
  if(!ids.length)throw new Error("Debés seleccionar al menos una carrera.");
  const rows=await db("carrera",{select:"id_carrera",id_carrera:"in.("+ids.join(",")+")"});
@@ -150,6 +173,7 @@ async function setOfferCareers(offerId,careerIds){
  await db("oferta_carrera",{id_oferta:"eq."+offerId},null,"DELETE");
  if(careerIds.length)await db("oferta_carrera",{},careerIds.map(id_carrera=>({id_oferta:offerId,id_carrera})),"POST");
 }
+// Genera enlaces temporales de acceso a archivos privados.
 async function signedAssetUrl(bucket,path,expires=180){
  const url=BASE+"/storage/v1/object/sign/"+bucket+"/"+path;
  const reply=await fetch(url,{method:"POST",headers:{"apikey":ADMIN_KEY,"authorization":"Bearer "+ADMIN_KEY,"content-type":"application/json"},body:JSON.stringify({expiresIn:expires})});
@@ -159,6 +183,7 @@ async function signedAssetUrl(bucket,path,expires=180){
  return new URL(/^https?:\/\//.test(raw)?raw:"/storage/v1/"+raw.replace(/^\/?storage\/v1\//,"").replace(/^\//,""),BASE).href;
 }
 
+// Verifica que el usuario sea un estudiante registrado y habilitado.
 async function studentForRequest(req) {
  const claims=await sessionFrom(req);
  if(!claims) return null;
@@ -170,6 +195,7 @@ async function studentForRequest(req) {
  return {user,student:students[0]};
 }
 // Sólo cuentas activas y con un perfil de rol vigente pueden consultar ofertas.
+// Exige sesión habilitada para consultar el catálogo de ofertas.
 async function canViewOffers(req){
  const claims=await sessionFrom(req);
  if(!claims)return false;
@@ -191,6 +217,11 @@ const itemTables={
  capacitacion:{table:"capacitacion",key:"id_capacitacion",fields:["tipo","nombre","institucion","anio"]}
 };
 
+/* =====================================================
+   PUNTO DE ENTRADA DE LA API
+   Lee la acción de la solicitud y la dirige al caso de uso.
+   Las operaciones protegidas comprueban el usuario en el servidor.
+   ===================================================== */
 Deno.serve(async req => {
  if(req.method==="OPTIONS")return new Response(null,{status:204,headers:cors});
  if(!BASE || !ADMIN_KEY) return fail("Configuración del servidor pendiente.",503);
@@ -200,11 +231,13 @@ Deno.serve(async req => {
  try{input=await req.json();}catch{return fail("JSON inválido.");}
  try{
  const action=String(input.action||"");
- if(action==="careers"){
+ // CATÁLOGO: devuelve carreras para formularios y filtros.
+if(action==="careers"){
   const items=await db("carrera",{select:"id_carrera,nombre",order:"nombre.asc"});
   return response({ok:true,items});
  }
- if(action==="offers"){
+ // CU06: lista oportunidades disponibles para cuentas autorizadas.
+if(action==="offers"){
   if(!(await canViewOffers(req)))return fail("Iniciá sesión con una cuenta habilitada para consultar las ofertas laborales.",401);
   const items=await db("oferta_laboral",{select:"id_oferta,titulo,tipo,descripcion,requisitos,estado,origen,fecha_publicacion,fecha_vencimiento,vigencia_indefinida",estado:"in.(Publicada,Vencida)",order:"fecha_publicacion.desc",limit:50});
   if(items.length){
@@ -213,7 +246,8 @@ Deno.serve(async req => {
   }
   return response({ok:true,items});
  }
- if(action==="register"){
+ // CU01 - REGISTRO: valida el padrón académico simulado y crea la cuenta.
+if(action==="register"){
   const matricula=normalizeMatricula(input.matricula);
   const cedula=String(input.cedula||"").trim();
   const correo=String(input.correo||"").trim().toLowerCase();
@@ -222,7 +256,8 @@ Deno.serve(async req => {
   if(!studentMatriculaPattern.test(matricula)) return fail("Formato de matrícula inválido. Ejemplo: c06559.");
   if(!/^[0-9]{5,12}$/.test(cedula)||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)||password.length<8||password.length>72||password!==repeat)
    return fail("Revisá matrícula, cédula, correo y contraseña (mínimo 8 caracteres).");
-  const academicRows = await db(
+  // Antes de registrar la cuenta se verifica la matrícula en el simulador académico.
+const academicRows = await db(
     "rpc/consultar_estudiante_academico_simulado",
     {},
     { p_matricula: matricula, p_cedula: cedula },
@@ -244,7 +279,8 @@ Deno.serve(async req => {
   }
   return response({ok:true,message:"Cuenta creada correctamente. Ya podés iniciar sesión."},201);
  }
- if(action==="login"){
+ // CU02 - LOGIN: busca el usuario, compara la contraseña y emite la sesión.
+if(action==="login"){
   const username=String(input.usuario||"").trim();
   const lookupUsername=/^[a-zA-Z][0-9]{5,7}$/.test(username) ? normalizeMatricula(username) : username;
   const password=String(input.password||"");
@@ -255,7 +291,8 @@ Deno.serve(async req => {
   if(!u.habilitado) return fail("Tu cuenta está deshabilitada. Contactá con Secretaría Académica.",403);
   return response({ok:true,token:await makeSession(u),profile:await userProfile(u)});
  }
- if(action==="me"){
+ // SESIÓN: recupera el perfil actual de un token válido.
+if(action==="me"){
   const claims=await sessionFrom(req);
   if(!claims)return fail("La sesión no es válida. Iniciá sesión de nuevo.",401);
   const users=await db("usuario",{select:"id_usuario,nombre_usuario,tipo_usuario,habilitado",id_usuario:"eq."+claims.id,limit:1});
@@ -264,7 +301,8 @@ Deno.serve(async req => {
  }
 
 
- if(action==="offer-detail"){
+ // CU07: recupera el detalle de una oferta con acceso privado.
+if(action==="offer-detail"){
   if(!(await canViewOffers(req)))return fail("Iniciá sesión con una cuenta habilitada para consultar las ofertas laborales.",401);
   const id=numberId(input.offer_id);if(!id)return fail("Oferta inválida.");
   const offers=await db("oferta_laboral",{select:"*",id_oferta:"eq."+id,estado:"in.(Publicada,Vencida)",limit:1});
@@ -289,7 +327,8 @@ Deno.serve(async req => {
 
 
 
- if(action==="offer-attachment"){
+ // ADJUNTOS: entrega enlaces privados solo con permiso.
+if(action==="offer-attachment"){
   // Un adjunto solo puede consultarse por usuario válido, y si la oferta está publicada o vencida.
   if(!(await canViewOffers(req)))return fail("Iniciá sesión para ver el adjunto de la oferta.",401);
   const id=numberId(input.attachment_id),offerId=numberId(input.offer_id);
@@ -302,7 +341,8 @@ Deno.serve(async req => {
   return response({ok:true,url:await signedAssetUrl("adjuntos-ofertas",attachment[0].ruta_archivo)});
  }
 
- if(action==="secretary-report"){
+ // REPORTE: Secretaría consulta ofertas y postulaciones para totalizadores.
+if(action==="secretary-report"){
   // Sólo Secretaría puede obtener este reporte administrativo. No modifica la BD.
   const actor=await actorFor(req,["Secretaría Académica"]);
   if(!actor)return fail("Acceso exclusivo de Secretaría Académica.",401);
@@ -334,7 +374,8 @@ Deno.serve(async req => {
   }));
   return response({ok:true,items});
  }
- if(action==="secretary-dashboard"){
+ // CU21-CU22: Secretaría obtiene empresas y revisores.
+if(action==="secretary-dashboard"){
   const actor=await actorFor(req,["Secretaría Académica"]);if(!actor)return fail("Acceso de Secretaría requerido.",401);
   const [companies,reviewers]=await Promise.all([
     db("empresa_verificada",{select:"id_empresa,id_usuario,ruc,razon_social,descripcion,persona_contacto,correo_contacto,telefono,habilitada",order:"id_empresa.desc"}),
@@ -345,7 +386,8 @@ Deno.serve(async req => {
   const mapped=new Map(users.map(x=>[x.id_usuario,x]));
   return response({ok:true,companies:companies.map(x=>({...x,usuario:mapped.get(x.id_usuario)||null})),reviewers:reviewers.map(x=>({...x,usuario:mapped.get(x.id_usuario)||null}))});
  }
- if(action==="secretary-create-company"||action==="secretary-create-reviewer"){
+ // CU21-CU22: creación de empresas verificadas o revisores.
+if(action==="secretary-create-company"||action==="secretary-create-reviewer"){
   const actor=await actorFor(req,["Secretaría Académica"]);if(!actor)return fail("Acceso de Secretaría requerido.",401);
   const isCompany=action==="secretary-create-company";
   const username=safeField(input.usuario,80).toLowerCase(),
@@ -373,7 +415,8 @@ Deno.serve(async req => {
   const notified=await mail(email,"Acceso a Bolsa Laboral Universitaria","Usuario: "+username+"\nContraseña temporal: "+temporary+"\nPor seguridad, cambiá esta contraseña al ingresar.");
   return response({ok:true,message:notified?"Cuenta creada. Se enviaron las credenciales por correo.":"Cuenta creada, pero no se enviaron las credenciales por correo. Copiá la contraseña temporal ahora.",temporary_password:notified?null:temporary,username});
  }
- if(action==="secretary-company-update"||action==="secretary-reviewer-update"){
+ // CU21-CU22: actualización de empresas o revisores.
+if(action==="secretary-company-update"||action==="secretary-reviewer-update"){
   const actor=await actorFor(req,["Secretaría Académica"]);if(!actor)return fail("Acceso de Secretaría requerido.",401);
   const isCompany=action==="secretary-company-update";
   const id=numberId(input.id),enabled=Boolean(input.habilitado);
@@ -393,12 +436,14 @@ Deno.serve(async req => {
   return response({ok:true,message:"Registro actualizado."});
  }
 
- if(action==="company-dashboard"){
+ // PANEL EMPRESA: recupera sus ofertas y datos.
+if(action==="company-dashboard"){
   const actor=await actorFor(req,["Empresa verificada"]);if(!actor)return fail("Acceso de empresa requerido.",401);
   const offers=await db("oferta_laboral",{select:"id_oferta,titulo,tipo,estado,fecha_publicacion,fecha_vencimiento,vigencia_indefinida,descripcion,requisitos",id_empresa:"eq."+actor.company.id_empresa,order:"id_oferta.desc"});
   return response({ok:true,company:actor.company,offers});
  }
- if(action==="company-profile-save"){
+ // CU24: modifica el perfil de la empresa autenticada.
+if(action==="company-profile-save"){
   const actor=await actorFor(req,["Empresa verificada"]);if(!actor)return fail("Acceso de empresa requerido.",401);
   const name=safeField(input.razon_social,150),description=safeField(input.descripcion,1500),
         contact=safeField(input.persona_contacto,120),email=safeField(input.correo_contacto,160).toLowerCase(),
@@ -407,7 +452,8 @@ Deno.serve(async req => {
   await db("empresa_verificada",{id_empresa:"eq."+actor.company.id_empresa},{razon_social:name,descripcion:description||null,persona_contacto:contact,correo_contacto:email,telefono:phone||null},"PATCH");
   return response({ok:true,message:"Perfil de la empresa actualizado."});
  }
- if(action==="company-offer-save"){
+ // CU10-CU11: publica o modifica ofertas de empresa verificada.
+if(action==="company-offer-save"){
   const actor=await actorFor(req,["Empresa verificada"]);if(!actor)return fail("Acceso de empresa requerido.",401);
   const ids=careersInput(input.carreras),id=numberId(input.offer_id);
   const title=safeField(input.titulo,180),kind=safeField(input.tipo,20),description=safeField(input.descripcion,4000),requirements=safeField(input.requisitos,4000);
@@ -427,7 +473,8 @@ Deno.serve(async req => {
   await setOfferCareers(offerId,ids);
   return response({ok:true,message:id?"Oferta actualizada.":"Oferta publicada.",offer_id:offerId});
  }
- if(action==="company-offer-drop"){
+ // CU12: da de baja una oferta y cierra las postulaciones.
+if(action==="company-offer-drop"){
   const actor=await actorFor(req,["Empresa verificada"]);if(!actor)return fail("Acceso de empresa requerido.",401);
   const id=numberId(input.offer_id);if(!id)return fail("Oferta inválida.");
   const changed=await db("oferta_laboral",{id_oferta:"eq."+id,id_empresa:"eq."+actor.company.id_empresa,estado:"eq.Publicada"},{estado:"Dada de baja",fecha_baja:new Date().toISOString()},"PATCH");
@@ -435,7 +482,8 @@ Deno.serve(async req => {
   await db("postulacion",{id_oferta:"eq."+id,estado:"eq.Activa"},{estado:"Cerrada"},"PATCH");
   return response({ok:true,message:"Oferta dada de baja y postulaciones cerradas."});
  }
- if(action==="company-applicants"){
+ // CU13: lista los postulantes de una oferta de la empresa.
+if(action==="company-applicants"){
   const actor=await actorFor(req,["Empresa verificada"]);if(!actor)return fail("Acceso de empresa requerido.",401);
   const id=numberId(input.offer_id);if(!id)return fail("Oferta inválida.");
   const own=await db("oferta_laboral",{select:"id_oferta,titulo",id_oferta:"eq."+id,id_empresa:"eq."+actor.company.id_empresa,limit:1});
@@ -450,7 +498,8 @@ Deno.serve(async req => {
   }
   return response({ok:true,title:own[0].titulo,applicants:people});
  }
- if(action==="company-applicant-profile"){
+ // CU13: muestra el perfil autorizado de un postulante.
+if(action==="company-applicant-profile"){
   const actor=await actorFor(req,["Empresa verificada"]);if(!actor)return fail("Acceso de empresa requerido.",401);
   const applicationId=numberId(input.application_id);if(!applicationId)return fail("Postulación inválida.");
   const application=(await db("postulacion",{select:"id_estudiante,id_oferta,estado,fecha_postulacion",id_postulacion:"eq."+applicationId,limit:1}))[0];
@@ -478,7 +527,8 @@ Deno.serve(async req => {
    professional:professional[0]?{habilidades:professional[0].habilidades,tecnologias:professional[0].tecnologias,disponibilidad_laboral:professional[0].disponibilidad_laboral}:null,
    experiences,languages,trainings,cv:cv[0]?.nombre_archivo||null});
  }
- if(action==="company-applicant-cv"){
+ // CU13: permite consultar un CV mediante un enlace temporal.
+if(action==="company-applicant-cv"){
   const actor=await actorFor(req,["Empresa verificada"]);if(!actor)return fail("Acceso de empresa requerido.",401);
   const id=numberId(input.application_id);if(!id)return fail("Postulación inválida.");
   const arr=await db("postulacion",{select:"id_estudiante,id_oferta",id_postulacion:"eq."+id,limit:1});
@@ -489,7 +539,8 @@ Deno.serve(async req => {
   if(!cv)return fail("Este estudiante no tiene CV.",404);
   return response({ok:true,url:await signedAssetUrl("cv-estudiantes",cv.ruta_archivo)});
  }
- if(action==="public-offer-submit"){
+ // CU14: registra propuestas externas pendientes de aprobación.
+if(action==="public-offer-submit"){
   // CU14: empresas sin usuario pueden remitir propuestas SIN consultar las ofertas.
   // Si alguien ya tiene una sesión activa, debe usar un rol habilitado.
   const claims=await sessionFrom(req);
@@ -540,7 +591,8 @@ Deno.serve(async req => {
   }
   return response({ok:true,message:"Oferta recibida. Será revisada y, si se aprueba, estará vigente 14 días."},201);
  }
- if(action==="reviewer-dashboard"){
+ // CU15: consulta ofertas pendientes, aprobadas e historial.
+if(action==="reviewer-dashboard"){
   const actor=await actorFor(req,["Centro de Estudiantes","Secretaría Académica"]);if(!actor)return fail("Acceso de revisor requerido.",401);
   const [pending,approved,history]=await Promise.all([
    db("oferta_laboral",{select:"id_oferta,id_remitente,titulo,tipo,descripcion,requisitos,fecha_envio,estado",estado:"eq.Pendiente de aprobación",id_remitente:"not.is.null",order:"fecha_envio.asc"}),
@@ -553,7 +605,8 @@ Deno.serve(async req => {
   for(const o of all)o.empresa=applicantsMap.get(o.id_remitente)||null;
   return response({ok:true,reviewer:actor.reviewer,pending,approved,history});
  }
- if(action==="reviewer-offer-detail"){
+ // CU15: consulta los datos y antecedentes de revisión.
+if(action==="reviewer-offer-detail"){
   const actor=await actorFor(req,["Centro de Estudiantes","Secretaría Académica"]);if(!actor)return fail("Acceso de revisor requerido.",401);
   const id=numberId(input.offer_id);if(!id)return fail("Oferta inválida.");
   const arr=await db("oferta_laboral",{select:"*",id_oferta:"eq."+id,id_remitente:"not.is.null",limit:1});
@@ -568,21 +621,24 @@ Deno.serve(async req => {
   ]);
   return response({ok:true,offer:o,sender:sender[0]||null,media,careers,revisions,attachments:attachments.map(({ruta_archivo,...rest})=>rest)});
  }
- if(action==="reviewer-attachment"){
+ // CU15: consulta adjuntos con permisos de revisor.
+if(action==="reviewer-attachment"){
   const actor=await actorFor(req,["Centro de Estudiantes","Secretaría Académica"]);if(!actor)return fail("Acceso de revisor requerido.",401);
   const id=numberId(input.attachment_id);if(!id)return fail("Adjunto inválido.");
   const found=await db("adjunto_oferta",{select:"ruta_archivo",id_adjunto:"eq."+id,limit:1});
   if(!found.length)return fail("Adjunto inexistente.",404);
   return response({ok:true,url:await signedAssetUrl("adjuntos-ofertas",found[0].ruta_archivo)});
  }
- if(action==="reviewer-evaluate"){
+ // CU16: valida aprobación/rechazo y exige motivo al rechazar.
+if(action==="reviewer-evaluate"){
   const actor=await actorFor(req,["Centro de Estudiantes","Secretaría Académica"]);if(!actor)return fail("Acceso de revisor requerido.",401);
   const id=numberId(input.offer_id),decision=safeField(input.decision,30),reason=safeField(input.motivo,1500);
   if(!id||!["Aprobar","Rechazar"].includes(decision)||(decision==="Rechazar"&&!reason))return fail("Faltan datos de evaluación.");
   const offers=await db("oferta_laboral",{select:"id_oferta",id_oferta:"eq."+id,estado:"eq.Pendiente de aprobación",id_remitente:"not.is.null",limit:1});
   if(!offers.length)return fail("Esta oferta ya fue evaluada.",409);
   // CU16: operación transaccional para guardar decisión, vencimiento y revisión juntos.
-  const done=await db("rpc/evaluar_oferta_pendiente",{},{
+  // RPC transaccional: cambia el estado y registra la decisión conjuntamente.
+const done=await db("rpc/evaluar_oferta_pendiente",{},{
    p_id_oferta:id,p_id_revisor:actor.reviewer.id_revisor,
    p_decision:decision,p_motivo:decision==="Rechazar"?reason:null
   },"POST");
@@ -595,7 +651,8 @@ Deno.serve(async req => {
   }
   return response({ok:true,message:"Oferta aprobada y publicada por 14 días."});
  }
- if(action==="reviewer-approved-save"){
+ // CU23: modifica una oferta aprobada sin ampliar su vencimiento.
+if(action==="reviewer-approved-save"){
   const actor=await actorFor(req,["Centro de Estudiantes","Secretaría Académica"]);if(!actor)return fail("Acceso de revisor requerido.",401);
   const id=numberId(input.offer_id),ids=careersInput(input.carreras),
    title=safeField(input.titulo,180),description=safeField(input.descripcion,4000),requirements=safeField(input.requisitos,4000),
@@ -611,7 +668,8 @@ Deno.serve(async req => {
   if(!updated.length)return fail("Esta oferta ya no está publicada y no puede modificarse.",409);
   return response({ok:true,message:"Oferta actualizada correctamente. Se conservó su fecha de vencimiento."});
  }
- if(action==="reviewer-approved-drop"){
+ // CU23: da de baja una oferta externa aprobada.
+if(action==="reviewer-approved-drop"){
   const actor=await actorFor(req,["Centro de Estudiantes","Secretaría Académica"]);if(!actor)return fail("Acceso de revisor requerido.",401);
   const id=numberId(input.offer_id);if(!id)return fail("Oferta inválida.");
   const changed=await db("oferta_laboral",{id_oferta:"eq."+id,id_remitente:"not.is.null",estado:"eq.Publicada"},{estado:"Dada de baja",fecha_baja:new Date().toISOString(),id_revisor_baja:actor.reviewer.id_revisor},"PATCH");
@@ -619,7 +677,8 @@ Deno.serve(async req => {
   return response({ok:true,message:"Oferta dada de baja."});
  }
 
- if(action==="student-dashboard"){
+ // PANEL ESTUDIANTE: carga información académica y profesional.
+if(action==="student-dashboard"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const {user,student}=auth;
   const [carreras,profesionales,curriculums]=await Promise.all([
@@ -639,7 +698,8 @@ Deno.serve(async req => {
   const {cedula,fecha_nacimiento,telefono,semestre_actual,matricula,nombre,apellido,id_carrera}=student;
   return response({ok:true,student:{matricula,cedula,nombre,apellido,fecha_nacimiento,telefono,semestre_actual,id_carrera,correo:user.correo},carreras,professional:prof,experiencias,idiomas,capacitaciones,cv:curriculums[0]||null});
  }
- if(action==="student-academic-save"){
+ // CU03: actualiza datos académicos de forma transaccional.
+if(action==="student-academic-save"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const correo=safeField(input.correo,160).toLowerCase();
   const telefono=safeField(input.telefono,25);
@@ -660,7 +720,8 @@ Deno.serve(async req => {
   if(!saved.length)return fail("No se pudo actualizar el perfil académico.",409);
   return response({ok:true,message:"Perfil académico actualizado."});
  }
- if(action==="student-professional-save"){
+ // CU04: guarda habilidades y disponibilidad laboral.
+if(action==="student-professional-save"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const data={habilidades:safeField(input.habilidades,1500)||null,tecnologias:safeField(input.tecnologias,1500)||null,disponibilidad_laboral:safeField(input.disponibilidad_laboral,100)||null};
   if(!data.habilidades||!data.disponibilidad_laboral)return fail("Completá habilidades y disponibilidad laboral antes de guardar.");
@@ -669,7 +730,8 @@ Deno.serve(async req => {
   else await db("perfil_profesional",{},[{id_estudiante:auth.student.id_estudiante,...data}],"POST");
   return response({ok:true,message:"Perfil profesional guardado."});
  }
- if(action==="student-item-save"||action==="student-item-remove"){
+ // CU04: mantiene experiencia, idioma y capacitaciones.
+if(action==="student-item-save"||action==="student-item-remove"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const item=itemTables[String(input.item_type||"")];
   if(!item)return fail("Tipo de dato inválido.");
@@ -717,7 +779,8 @@ Deno.serve(async req => {
   }else await db(item.table,{},[{id_perfil:prof.id_perfil,...data}],"POST");
   return response({ok:true,message:"Información profesional actualizada."});
  }
- if(action==="student-cv-upload"){
+ // CU05: guarda PDF del currículum en Storage privado.
+if(action==="student-cv-upload"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const filename=safeField(input.filename,200);
   const base64=String(input.file_base64||"");
@@ -742,7 +805,8 @@ Deno.serve(async req => {
   }
   return response({ok:true,message:"Currículum guardado correctamente."});
  }
- if(action==="student-cv-remove"){
+ // CU05: elimina el CV asociado al estudiante.
+if(action==="student-cv-remove"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const current=(await db("curriculum_vitae",{select:"id_cv,ruta_archivo",id_estudiante:"eq."+auth.student.id_estudiante,limit:1}))[0];
   if(!current)return fail("No tenés un currículum cargado.",404);
@@ -756,7 +820,8 @@ Deno.serve(async req => {
   await db("curriculum_vitae",{id_cv:"eq."+current.id_cv,id_estudiante:"eq."+auth.student.id_estudiante},null,"DELETE");
   return response({ok:true,message:"Currículum eliminado correctamente."});
  }
- if(action==="student-cv-view"){
+ // CU05: obtiene una URL temporal de acceso al CV.
+if(action==="student-cv-view"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const cv=(await db("curriculum_vitae",{select:"ruta_archivo",id_estudiante:"eq."+auth.student.id_estudiante,limit:1}))[0];
   if(!cv)return fail("Todavía no cargaste tu currículum.",404);
@@ -767,12 +832,14 @@ Deno.serve(async req => {
   const path=/^https?:\/\//.test(raw)?raw:("/storage/v1/"+raw.replace(/^\/?storage\/v1\//,"").replace(/^\//,""));
   return response({ok:true,url:new URL(path,BASE).href});
  }
- if(action==="student-applications"){
+ // CU09: muestra postulaciones realizadas por el estudiante.
+if(action==="student-applications"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const items=await db("postulacion",{select:"id_postulacion,id_oferta,estado,fecha_postulacion,fecha_retiro,oferta_laboral(titulo,tipo,estado,fecha_vencimiento)",id_estudiante:"eq."+auth.student.id_estudiante,order:"fecha_postulacion.desc",limit:100});
   return response({ok:true,items});
  }
- if(action==="student-apply"){
+ // CU08: valida y registra una postulación laboral.
+if(action==="student-apply"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const id=numberId(input.offer_id);if(!id)return fail("Oferta inválida.");
   const arr=await db("oferta_laboral",{select:"id_oferta,id_empresa,estado,fecha_vencimiento,vigencia_indefinida",id_oferta:"eq."+id,limit:1});
@@ -786,7 +853,8 @@ Deno.serve(async req => {
   catch{return fail("No se pudo postular. Verificá si ya existe una postulación.",409);}
   return response({ok:true,message:"Postulación registrada correctamente."});
  }
- if(action==="student-withdraw"){
+ // CU20: retira una postulación realizada.
+if(action==="student-withdraw"){
   const auth=await studentForRequest(req);if(!auth)return fail("Iniciá sesión como estudiante.",401);
   const id=numberId(input.application_id);if(!id)return fail("Postulación inválida.");
   const arr=await db("postulacion",{select:"id_postulacion,id_oferta,estado",id_postulacion:"eq."+id,id_estudiante:"eq."+auth.student.id_estudiante,limit:1});
@@ -799,7 +867,8 @@ Deno.serve(async req => {
   return response({ok:true,message:"Postulación retirada. No podrás volver a postularte a la misma oferta."});
  }
 
- if(action==="password-reset-request"){
+ // CU18: genera un enlace temporal de recuperación por correo.
+if(action==="password-reset-request"){
   const email=safeField(input.correo,200).toLowerCase();
   if(!validEmail(email))return fail("Ingresá un correo válido.");
   if(!gmailConfigured())return fail("La recuperación por correo aún no está configurada. Consultá con Secretaría Académica.",503);
@@ -819,7 +888,8 @@ Deno.serve(async req => {
   }
   return response({ok:true,message:generic});
  }
- if(action==="password-reset-complete"){
+ // CU18: valida el enlace y actualiza la contraseña.
+if(action==="password-reset-complete"){
   const raw=String(input.token||"").trim(),pass=String(input.password||"");
   if(!/^[A-Za-z0-9_-]{25,80}$/.test(raw)||pass.length<8||pass.length>72)return fail("Enlace o contraseña inválidos.");
   const tokenHash=await sha256B64(raw);
@@ -832,7 +902,8 @@ Deno.serve(async req => {
   return response({ok:true,message:"Contraseña actualizada. Ya podés iniciar sesión."});
  }
 
- if(action==="password-change"){
+ // CU19: cambia la contraseña tras comprobar la actual.
+if(action==="password-change"){
   const claims=await sessionFrom(req);if(!claims)return fail("Iniciá sesión.",401);
   const users=await db("usuario",{select:"id_usuario,contrasena_hash,habilitado",id_usuario:"eq."+claims.id,limit:1});
   const u=users[0];if(!u||!u.habilitado)return fail("La cuenta no está habilitada.",403);
