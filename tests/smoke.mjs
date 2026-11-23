@@ -79,3 +79,7 @@ console.log(recovery.status===503
 const anonymousFlyer=await call("offer-attachment",{offer_id:24,attachment_id:7});
 assert.equal(anonymousFlyer.status,401,JSON.stringify(anonymousFlyer.body));
 console.log("OK: flyer de oferta publicada exige sesión habilitada.");
+
+const anonymousReport=await call("secretary-report");
+assert.equal(anonymousReport.status,401,JSON.stringify(anonymousReport.body));
+console.log("OK: reporte con totalizadores exige sesión de Secretaría Académica.");
