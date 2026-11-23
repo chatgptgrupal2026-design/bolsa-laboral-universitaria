@@ -4,6 +4,7 @@
 const E=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const root=()=>document.getElementById('portal-area');
 let role='',tab='',view=null,careers=[],editingOffer=null,reviewOffer=null,selectedApplicants=null,selectedProfile=null;
+let reportData=null,reportLoading=false,reportFilters={estado:'',tipo:''};
 const isCompany=()=>role==='Empresa verificada';
 const isSecretary=()=>role==='Secretaría Académica';
 const isReviewer=()=>['Centro de Estudiantes','Secretaría Académica'].includes(role);
@@ -72,7 +73,8 @@ const menuForRole=()=>isCompany()?
  {id:'historial',label:'Historial de ofertas',icon:'ofertas',description:'Consultá ofertas rechazadas, dadas de baja o vencidas.'},
  ...(isSecretary()?[
  {id:'empresas',label:'Empresas verificadas',icon:'empresas',description:'Administrá las empresas habilitadas en la plataforma.'},
- {id:'revisores',label:'Usuarios revisores',icon:'revisores',description:'Gestioná los usuarios del Centro de Estudiantes y Secretaría.'}
+ {id:'revisores',label:'Usuarios revisores',icon:'revisores',description:'Gestioná los usuarios del Centro de Estudiantes y Secretaría.'},
+ {id:'reportes',label:'Reporte de ofertas',icon:'reportes',description:'Consultá el detalle de las ofertas y los totalizadores por estado.'}
  ]:[]),
  {id:'seguridad',label:'Seguridad',icon:'seguridad',description:'Actualizá la contraseña de tu cuenta.'}
  ];
@@ -91,7 +93,7 @@ function select(nextTab){
  tab=valid;editingOffer=null;reviewOffer=null;selectedApplicants=null;window._portalForm='';
  render();
 }
-function clear(){role='';tab='inicio';view=null;editingOffer=null;reviewOffer=null;selectedApplicants=null;window._portalForm='';if(root())root().innerHTML='';}
+function clear(){role='';tab='inicio';view=null;editingOffer=null;reviewOffer=null;selectedApplicants=null;reportData=null;reportLoading=false;reportFilters={estado:'',tipo:''};window._portalForm='';if(root())root().innerHTML='';}
 function go(t){navigate('perfil/'+t);}
 function portalHome(){
  const label=isCompany()?'Gestión de empresa':'Gestión de revisión';
@@ -145,8 +147,77 @@ function render(){
   if(tab==='historial')area().innerHTML=reviewList(false,true);
   if(tab==='empresas')area().innerHTML=adminCompanies();
   if(tab==='revisores')area().innerHTML=adminReviewers();
+  if(tab==='reportes'&&isSecretary()){
+   area().innerHTML=reportHtml();
+   if(!reportData&&!reportLoading)loadReport();
+  }
  }
  if(tab==='seguridad')area().innerHTML=security();
+}
+// Reporte administrativo de lectura, sin cambios de datos ni permisos a otros roles.
+async function loadReport(){
+ if(!isSecretary()||!getToken()||reportLoading)return;
+ reportLoading=true;
+ if(tab==='reportes'&&area())area().innerHTML='<div class="status-message">Consultando ofertas y postulaciones...</div>';
+ try{
+  reportData=await request('secretary-report',{},true);
+  if(tab==='reportes'&&area())area().innerHTML=reportHtml();
+ }catch(err){
+  reportData=null;
+  if(tab==='reportes'&&area())area().innerHTML='<div class="alert">'+E(err.message)+'</div><button type="button" class="btn btn-secondary" data-report-refresh>Reintentar</button>';
+ }finally{reportLoading=false;}
+}
+function reportItems(){
+ const all=reportData?.items||[];
+ return all.filter(x=>(!reportFilters.estado||x.estado===reportFilters.estado)&&
+  (!reportFilters.tipo||x.tipo===reportFilters.tipo));
+}
+function reportDate(value){
+ if(!value)return '—';
+ const parts=String(value).slice(0,10).split('-');
+ return parts.length===3?parts[2]+'/'+parts[1]+'/'+parts[0]:'—';
+}
+function reportHtml(){
+ if(!reportData)return '<div class="status-message">Consultando ofertas y postulaciones...</div>';
+ const all=reportData.items||[];
+ const items=reportItems();
+ const total=items.reduce((sum,x)=>sum+Number(x.postulaciones||0),0);
+ const states=[...new Set(all.map(x=>x.estado).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+ const types=[...new Set(all.map(x=>x.tipo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+ const byState=[...new Set(items.map(x=>x.estado||'Sin estado'))].sort((a,b)=>a.localeCompare(b,'es')).map(estado=>{
+  const group=items.filter(x=>(x.estado||'Sin estado')===estado);
+  return {estado,cantidad:group.length,postulaciones:group.reduce((sum,x)=>sum+Number(x.postulaciones||0),0)};
+ });
+ return '<section class="report-module" aria-label="Reporte de ofertas laborales">'+
+ '<div class="report-toolbar"><div><h2>Reporte general de ofertas laborales</h2><p class="muted">Datos actuales de Supabase. Los totales corresponden a los filtros aplicados.</p></div>'+
+ '<div class="report-actions"><button type="button" class="btn btn-secondary" data-report-refresh>Actualizar</button>'+
+ '<button type="button" class="btn btn-primary" data-report-export>Exportar CSV</button></div></div>'+
+ '<div class="report-filters"><div class="field"><label for="report-status">Estado de la oferta</label><select id="report-status">'+option('','Todos los estados',!reportFilters.estado)+states.map(x=>option(x,x,reportFilters.estado===x)).join('')+'</select></div>'+
+ '<div class="field"><label for="report-type">Tipo de oportunidad</label><select id="report-type">'+option('','Todos los tipos',!reportFilters.tipo)+types.map(x=>option(x,x,reportFilters.tipo===x)).join('')+'</select></div></div>'+
+ '<div class="report-metrics"><article class="report-metric"><span>Ofertas encontradas</span><strong>'+items.length+'</strong></article>'+
+ '<article class="report-metric"><span>Postulaciones registradas</span><strong>'+total+'</strong></article></div>'+
+ '<h3 class="report-subtitle">Totalizadores por estado</h3>'+
+ '<div class="report-table-wrap"><table class="report-table" aria-label="Totalizadores por estado"><thead><tr><th scope="col">Estado</th><th scope="col" class="report-num">Ofertas</th><th scope="col" class="report-num">Postulaciones</th></tr></thead><tbody>'+
+ (byState.length?byState.map(x=>'<tr><td>'+E(x.estado)+'</td><td class="report-num">'+x.cantidad+'</td><td class="report-num">'+x.postulaciones+'</td></tr>').join(''):'<tr><td colspan="3">No se encontraron ofertas con estos filtros.</td></tr>')+
+ '</tbody><tfoot><tr><th scope="row">TOTAL GENERAL</th><td class="report-num">'+items.length+'</td><td class="report-num">'+total+'</td></tr></tfoot></table></div>'+
+ '<h3 class="report-subtitle">Detalle de ofertas</h3>'+
+ '<div class="report-table-wrap"><table class="report-table" aria-label="Detalle de ofertas laborales"><thead><tr>'+
+ '<th scope="col">Fecha</th><th scope="col">Oferta</th><th scope="col">Empresa</th><th scope="col">Tipo</th><th scope="col">Estado</th><th scope="col" class="report-num">Postulaciones</th></tr></thead><tbody>'+
+ (items.length?items.map(x=>'<tr><td>'+E(reportDate(x.fecha))+'</td><td>'+E(x.titulo)+'</td><td>'+E(x.empresa)+'</td><td>'+E(x.tipo)+'</td><td>'+E(x.estado)+'</td><td class="report-num">'+Number(x.postulaciones||0)+'</td></tr>').join(''):'<tr><td colspan="6">No se encontraron ofertas con estos filtros.</td></tr>')+
+ '</tbody><tfoot><tr><th colspan="5" scope="row">TOTAL · '+items.length+' oferta(s)</th><td class="report-num">'+total+'</td></tr></tfoot></table></div>'+
+ '<p class="report-note">Las postulaciones incluyen todos los estados, incluso retiros. El reporte es de solo lectura.</p></section>';
+}
+function downloadReportCsv(){
+ if(!reportData)return;
+ const rows=reportItems();
+ const escapeCsv=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+ const header=['Fecha','Oferta','Empresa','Tipo','Estado','Postulaciones'];
+ const csv=[header,...rows.map(x=>[reportDate(x.fecha),x.titulo,x.empresa,x.tipo,x.estado,Number(x.postulaciones||0)]),
+ ['TOTAL GENERAL',rows.length+' ofertas','','','',rows.reduce((sum,x)=>sum+Number(x.postulaciones||0),0)]]
+  .map(cols=>cols.map(escapeCsv).join(';')).join('\r\n');
+ const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+ const a=document.createElement('a');a.href=url;a.download='Reporte_Ofertas_Bolsa_Laboral.csv';document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 function company(){
  const c=view.company||{};
@@ -280,6 +351,7 @@ async function perform(action,payload){
   if(action==='company-offer-save')editingOffer=null;
   if(action==='reviewer-approved-save')reviewOffer=null;
   if(action.startsWith('secretary-'))window._portalForm='';
+  reportData=null;
   await load();
   message(resp.temporary_password
    ?'Cuenta '+resp.username+' creada. Contraseña temporal (guardala ahora; no se envió por correo): '+resp.temporary_password
@@ -296,6 +368,8 @@ async function readFile(file,limits=['pdf','png','jpg','jpeg']){
 }
 document.addEventListener('click',async e=>{
  const t=e.target.closest('[data-portal-tab]');if(t){window._portalForm='';go(t.dataset.portalTab);return;}
+ if(e.target.closest('[data-report-refresh]')){reportData=null;await loadReport();return;}
+ if(e.target.closest('[data-report-export]')){downloadReportCsv();return;}
  if(e.target.closest('[data-new-offer]')){editingOffer={};render();return;}
  if(e.target.closest('[data-cancel-offer]')){editingOffer=null;render();return;}
  const edit=e.target.closest('[data-edit-offer]');
@@ -359,6 +433,13 @@ document.addEventListener('click',async e=>{
  const editR=e.target.closest('[data-edit-reviewer]');
  if(editR){const row=view.reviewers.find(x=>String(x.id_revisor)===editR.dataset.editReviewer);window._portalForm=adminForm('reviewer',row);render();return;}
  if(e.target.closest('[data-admin-cancel]')){window._portalForm='';render();}
+});
+document.addEventListener('change',e=>{
+ if(!isSecretary()||tab!=='reportes'||!reportData)return;
+ if(e.target.id==='report-status')reportFilters.estado=e.target.value;
+ else if(e.target.id==='report-type')reportFilters.tipo=e.target.value;
+ else return;
+ if(area())area().innerHTML=reportHtml();
 });
 document.addEventListener('submit',async e=>{
  const f=e.target;
