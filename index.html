@@ -10,8 +10,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- ESTILOS: capa base y tema visual índigo, cargados en ese orden. -->
   <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="./theme-indigo.css" />
+  <!-- FRONTEND: navegación, autenticación, paneles por rol y avisos. -->
   <script defer src="./app.js"></script>
   <script defer src="./ux-feedback.js"></script>
   <script defer src="./workspace.js"></script>
@@ -40,6 +42,7 @@
   </header>
 
   <main id="main" tabindex="-1">
+    <!-- PANTALLA: portada pública y acceso a las funcionalidades del sistema. -->
     <section class="screen" id="screen-inicio" data-screen="inicio">
       <div class="hero"><div class="wrap hero-layout">
         <div class="hero-content">
@@ -69,6 +72,7 @@
       </div>
     </section>
 
+    <!-- CU06-CU07: consulta privada de ofertas con filtros y detalles. -->
     <section class="screen hidden" id="screen-ofertas" data-screen="ofertas">
       <div class="section-banner"><div class="wrap"><span class="eyebrow">BOLSA DE TRABAJO</span><h1>Ofertas laborales y pasantías</h1><p>Acceso exclusivo para usuarios con sesión iniciada de la comunidad universitaria.</p></div></div>
       <div class="wrap content-section">
@@ -78,6 +82,7 @@
       </div>
     </section>
 
+    <!-- CU02: formulario de acceso; la contraseña se valida en el backend. -->
     <section class="screen hidden" id="screen-login" data-screen="login">
       <div class="auth-page"><div class="auth-shell"><div class="auth-intro"><span class="eyebrow dark">ACCESO A LA PLATAFORMA</span><h1>Bienvenido nuevamente</h1><p>Ingresá para acceder a las oportunidades laborales y gestionar tu perfil universitario.</p><div class="auth-decoration" aria-hidden="true">✦</div></div><div class="auth-panel">
         <div class="auth-heading"><img class="auth-mini-logo uc-auth-logo" src="./assets/uc-logo.svg" alt="Logo UC" width="44" height="44" /><h2>Iniciar sesión</h2><p>Ingresá tu matrícula (estudiante) o nombre de usuario (empresa, Centro de Estudiantes o Secretaría Académica), con tu contraseña.</p></div>
@@ -93,6 +98,7 @@
     </section>
 
     
+    <!-- CU18: solicitud de recuperación mediante un correo registrado. -->
     <section class="screen hidden" id="screen-recuperar" data-screen="recuperar">
       <div class="auth-page"><div class="wrap" style="max-width:520px">
         <div class="register-card"><span class="eyebrow dark">RECUPERAR CONTRASEÑA</span><h1 style="font-size:28px">¿Olvidaste tu contraseña?</h1>
@@ -105,6 +111,7 @@
         </div>
       </div></div>
     </section>
+    <!-- CU18: elección de nueva contraseña con un token temporal válido. -->
     <section class="screen hidden" id="screen-restablecer" data-screen="restablecer">
       <div class="auth-page"><div class="wrap" style="max-width:520px">
         <div class="register-card"><span class="eyebrow dark">NUEVA CONTRASEÑA</span><h1 style="font-size:28px">Restablecer contraseña</h1>
@@ -119,6 +126,7 @@
       </div></div>
     </section>
 
+    <!-- CU01: registro con matrícula y verificación académica en Supabase. -->
     <section class="screen hidden" id="screen-registro" data-screen="registro">
       <div class="section-banner short"><div class="wrap"><span class="eyebrow">ESTUDIANTES</span><h1>Registro de estudiante</h1><p>Creá tu cuenta con los datos verificados por el sistema académico simulado.</p></div></div>
       <div class="wrap register-layout"><div class="register-help"><div class="info-card"><div class="feature-icon">◎</div><h2>Comenzá tu camino profesional</h2><p>Al registrarte, tu matrícula y cédula se verifican contra los datos académicos simulados para esta etapa del proyecto.</p><div class="demo-box"><strong>Datos de demostración</strong><p>Matrícula: <code>c06559</code><br />Cédula: la asociada a la matrícula</p><small>La matrícula y la cédula se verifican en el simulador académico, sin conexión al sistema real. Una matrícula solo puede registrarse una vez.</small></div></div></div>
@@ -136,6 +144,7 @@
     </section>
 
     
+    <!-- CU14: empresa externa envía una propuesta que requiere revisión. -->
     <section class="screen hidden" id="screen-compartir" data-screen="compartir">
       <div class="section-banner short"><div class="wrap"><span class="eyebrow">EMPRESAS SIN CUENTA</span><h1>Compártenos tu oferta laboral</h1><p>Las ofertas enviadas se revisarán antes de publicarse; si se aprueban estarán vigentes durante 14 días.</p></div></div>
       <div class="wrap register-layout">
@@ -170,6 +179,7 @@
       </div>
     </section>
 
+    <!-- PANELES: student.js y portal.js crean aquí las secciones del rol. -->
     <section class="screen hidden workspace-screen" id="screen-perfil" data-screen="perfil">
       <div class="wrap dashboard-page-wrap">
         <div id="profile-card" class="profile-card"><p>Cargando tu espacio...</p></div>
@@ -179,6 +189,7 @@
       </div>
     </section>
   </main>
+  <!-- CU07: ventana accesible con el detalle de una oferta. -->
   <dialog id="offer-modal" aria-label="Detalle de la oferta laboral"></dialog>
 
   <footer><div class="wrap footer-content"><div class="footer-brand-uc"><img src="./assets/uc-logo.svg" alt="Universidad Católica" width="42" height="42" loading="lazy" /><div><strong>Bolsa de Trabajo Universitaria</strong><p>Facultad de Ciencias y Tecnología · Proyecto académico 2026</p></div></div><span>Desarrollado para Ingeniería del Software 2</span></div></footer>
