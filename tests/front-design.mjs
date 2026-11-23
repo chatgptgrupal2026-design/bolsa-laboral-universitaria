@@ -106,10 +106,10 @@ console.log('OK: historial, flyer privado, edición transaccional y datos comple
 
 assert.match(portal,/id:'reportes',label:'Reporte de ofertas'/);
 assert.match(workspace,/reportes:'<rect/);
-assert.match(theme,/\\.report-table/);
-assert.match(backend,/if\\(action==="secretary-report"\\)\\{[\\s\\S]*?actorFor\\(req,\\["Secretaría Académica"\\]\\)/);
-assert.match(backend,/reportAll\\("postulacion"/);
-assert.match(portal,/function downloadReportCsv\\(/);
+assert.match(theme,/\.report-table/);
+assert.match(backend,/if\(action==="secretary-report"\)\{[\s\S]*?actorFor\(req,\["Secretaría Académica"\]\)/);
+assert.match(backend,/reportAll\("postulacion"/);
+assert.match(portal,/function downloadReportCsv\(/);
 const start=portal.indexOf('function reportItems(){'),end=portal.indexOf('function company(){',start);
 assert.ok(start>=0 && end>start,'Deben existir totalizadores de reporte.');
 const testContext={
@@ -124,19 +124,19 @@ const testContext={
 vm.createContext(testContext);
 vm.runInContext(portal.slice(start,end)+'\n globalThis.testReport={reportHtml,reportItems};',testContext);
 const full=testContext.testReport.reportHtml();
-assert.match(full,/<strong>2<\\/strong>/);
-assert.match(full,/<strong>4<\\/strong>/);
+assert.match(full,/<strong>2<\/strong>/);
+assert.match(full,/<strong>4<\/strong>/);
 assert.match(full,/TOTAL GENERAL/);
 assert.match(full,/Oferta de desarrollo/);
 assert.match(full,/Oferta de pasantía/);
 testContext.reportFilters.estado='Publicada';
 const filtered=testContext.testReport.reportHtml();
 assert.equal(testContext.testReport.reportItems().length,1);
-assert.match(filtered,/<strong>1<\\/strong>/);
-assert.match(filtered,/<strong>3<\\/strong>/);
+assert.match(filtered,/<strong>1<\/strong>/);
+assert.match(filtered,/<strong>3<\/strong>/);
 assert.doesNotMatch(filtered,/Oferta de pasantía/);
 testContext.reportFilters.estado='Vencida';
 const empty=testContext.testReport.reportHtml();
 assert.match(empty,/No se encontraron ofertas con estos filtros/);
-assert.match(empty,/<strong>0<\\/strong>/);
+assert.match(empty,/<strong>0<\/strong>/);
 console.log('OK: reporte administrativo con acceso restringido, filtros y totalizadores coherentes.');
