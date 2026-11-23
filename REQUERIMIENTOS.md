@@ -70,9 +70,13 @@ Toda propuesta de empresa externa se almacena con origen `Empresa no verificada`
 
 Los usuarios y contraseñas de prueba **no se incluyen en este repositorio público**. Cambiar las contraseñas demo tras la primera prueba.
 
-## Correo electrónico pendiente de activar
+## Correo electrónico — Gmail SMTP pendiente de activar
 
-El código contempla la API de Resend para el envío de enlaces de recuperación, credenciales de usuarios creados por Secretaría y notificaciones de rechazo. Para que funcione de verdad, hace falta configurar **`RESEND_API_KEY`** y **`RESEND_FROM`** como secretos de la función Supabase y verificar el dominio remitente. Sin esos secretos, las operaciones se muestran como no disponibles o pendientes de notificación; no se simula falsamente su envío.
+**Actualización del 23/11/2026:** sustituimos Resend por **Gmail SMTP sobre TLS (puerto 465)** mediante Nodemailer en la Edge Function. Se conservan recuperación de contraseña, avisos de rechazo y credenciales temporales de nuevas empresas/revisores.
+
+**El envío real sigue PENDIENTE** de que el equipo cree un Gmail exclusivo, active verificación en dos pasos, genere una contraseña de aplicación y cargue **`GMAIL_USER`** y **`GMAIL_APP_PASSWORD`** en los secretos de Supabase. No hace falta comprar un dominio ni cambiar Vercel. Ninguna contraseña se incluye en GitHub o chats.
+
+La integración se desplegó, pero **las pruebas son simuladas** hasta verificar un correo real. Consultar la [guía paso a paso](./docs/CONFIGURAR_CORREO_GMAIL.md).
 
 ## Para probar todos los casos de uso
 
