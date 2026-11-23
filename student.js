@@ -1,4 +1,8 @@
-/* Interfaz de estudiante — CU03-CU09, CU19 y CU20 */
+/* =====================================================
+   MÓDULO: PANEL DEL ESTUDIANTE (FRONTEND)
+   CU03-CU09 y CU19-CU20: perfil, CV y postulaciones.
+   Las operaciones de datos se validan en el backend.
+   ===================================================== *//* Interfaz de estudiante — CU03-CU09, CU19 y CU20 */
 (function(){
 'use strict';
 const H=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -9,12 +13,14 @@ let loading=false;
 let editing={};
 const el=()=>document.getElementById('student-area');
 function info(message,kind='success'){window.BolsaUI?.notify(message,kind);const m=document.getElementById('student-message');if(m){m.textContent=message;m.className='alert '+(kind==='success'?'success':'');}}
+// Carga el perfil académico, profesional y los datos del panel mediante la API.
 async function load(){
  if(loading)return;loading=true;
  try{data=await request('student-dashboard',{},true);render();}
  catch(e){if(el())el().innerHTML='<div class="alert">'+H(e.message)+'</div>';}
  finally{loading=false;}
 }
+// Opciones del menú exclusivas para el usuario estudiante.
 const sections=[
  {id:'inicio',label:'Inicio',icon:'inicio',description:'Un resumen de tu información y tus próximas oportunidades.'},
  {id:'academico',label:'Perfil académico',icon:'academico',description:'Consultá tus datos universitarios y actualizá tu información de contacto.'},
@@ -31,6 +37,7 @@ function select(tab){
  }
 }
 function nav(tab){navigate('perfil/'+tab);}
+// Construye el panel y muestra la sección seleccionada sin recargar la web.
 function render(){
  const root=el();if(!root||!getToken()||!data)return;
  const section=sections.find(x=>x.id===activeTab)||sections[0];
@@ -76,6 +83,10 @@ function field(id,label,value,opts={}){
  const disabled=opts.disabled?' disabled':'';
  return '<div class="field"><label for="'+id+'">'+H(label)+'</label><input id="'+id+'" name="'+id+'" type="'+type+'" value="'+H(value)+'"'+extra+req+disabled+' /></div>';
 }
+/* =====================================================
+   CU03 - PERFIL ACADÉMICO
+   Muestra y permite actualizar los datos universitarios autorizados.
+   ===================================================== */
 function academic(){
  const s=data.student;
  return '<div class="dashboard-form-stack">'+
@@ -100,6 +111,10 @@ function academic(){
   '</section>'+
  '</div>';
 }
+/* =====================================================
+   CU04 - PERFIL PROFESIONAL
+   Presenta habilidades, tecnologías, disponibilidad y experiencia.
+   ===================================================== */
 function professional(){
  const p=data.professional||{};
  const collections=[
@@ -115,6 +130,7 @@ function professional(){
  collections.map(([key,title,items,idField,fields])=>collection(key,title,items,idField,fields)).join('');
 }
 const names={empresa:'Empresa',cargo:'Cargo',fecha_inicio:'Fecha de inicio',fecha_fin:'Fecha de finalización',nombre:'Nombre',nivel:'Nivel',tipo:'Tipo',institucion:'Institución',anio:'Año'};
+// Formulario reutilizable de experiencia laboral, idiomas y capacitaciones.
 function collection(type,title,items,key,fields){
  const current=editing[type];
  return '<section class="student-collection"><div class="collection-title"><h3>'+title+'</h3><button class="btn btn-secondary" data-add-item="'+type+'">Agregar</button></div>'+
@@ -123,6 +139,10 @@ function collection(type,title,items,key,fields){
  (type==='experiencia'?'<label class="ux-work-current"><input id="item-actualmente_trabajo" name="item-actualmente_trabajo" type="checkbox" value="true" '+(current.id&&!current.values?.fecha_fin?'checked':'')+' /><span>Actualmente estoy trabajando en este lugar</span></label><p class="ux-form-help">Si seguís trabajando aquí, marcá la casilla y no hace falta indicar una fecha de finalización.</p>':'')+
  '<div class="inline-actions"><button type="submit" class="btn btn-primary">Guardar</button><button type="button" class="btn btn-secondary" data-cancel-item="'+type+'">Cancelar</button></div></form>':'')+'</section>';
 }
+/* =====================================================
+   CU05 - CURRÍCULUM VITAE
+   Permite subir, visualizar o eliminar el PDF en Storage privado.
+   ===================================================== */
 function curriculum(){
  const cv=data.cv;
  return '<section class="dashboard-detail-card"><div class="dashboard-card-heading"><div><span class="dashboard-card-kicker">CURRÍCULUM VITAE</span><h2>Tu documento profesional</h2><p>Podés subir o reemplazar tu CV en formato PDF (máximo 5 MB).</p></div></div>'+
@@ -133,6 +153,10 @@ function security(){
  return '<section class="dashboard-detail-card"><div class="dashboard-card-heading"><div><span class="dashboard-card-kicker">PROTECCIÓN DE LA CUENTA</span><h2>Cambiar contraseña</h2><p>Para proteger tu cuenta, ingresá la contraseña actual antes de guardar una nueva.</p></div></div>'+
  '<form id="password-form" class="student-form">'+field('actual-password','Contraseña actual','',{type:'password',required:true})+field('nueva-password','Nueva contraseña (mínimo 8 caracteres)','',{type:'password',required:true})+field('repetir-password','Confirmar nueva contraseña','',{type:'password',required:true})+'<button class="btn btn-primary" type="submit">Cambiar contraseña</button></form></section>';
 }
+/* =====================================================
+   CU09 - HISTORIAL DE POSTULACIONES
+   Recupera las solicitudes realizadas por el estudiante.
+   ===================================================== */
 async function fetchApplications(){
  try{
   const r=await request('student-applications',{},true);
@@ -145,6 +169,7 @@ async function fetchApplications(){
  }catch(e){const c=document.getElementById('student-content');if(c)c.innerHTML='<div class="alert">'+H(e.message)+'</div>';}
 }
 function rowHTML(label,value){return '<p><strong>'+label+':</strong> '+H(value||'No informado')+'</p>';}
+// Obtiene el detalle de una oferta y lo muestra en una ventana de consulta.
 async function showOffer(id){
  if(!getToken()){navigate('login');return;}
  const modal=document.getElementById('offer-modal');
@@ -192,6 +217,7 @@ async function showOffer(id){
   '<button class="btn btn-secondary" data-close-offer>Cerrar</button></div>';
  }catch(e){modal.innerHTML='<div class="modal-body"><p class="alert">'+H(e.message)+'</p><button class="btn btn-secondary" data-close-offer>Cerrar</button></div>';}
 }
+// Ejecuta una acción protegida y actualiza el panel al guardar correctamente.
 async function perform(action,body,message){
  try{const result=await request(action,body,true);await load();info(result.message||message);return true;}
  catch(e){info(e.message,'error');return false;}
@@ -226,12 +252,14 @@ document.addEventListener('click',async e=>{
   }
   return;
  }
+// CU08: solicita confirmación antes de registrar una postulación.
  const apply=e.target.closest('[data-apply]');if(apply){
    if(await window.BolsaUI.confirm('¿Querés enviar tu postulación a esta oferta?',{title:'Confirmar postulación',confirmLabel:'Sí, postularme'})){
      const ok=await perform('student-apply',{offer_id:Number(apply.dataset.apply)},'Postulación registrada.');
      if(ok){document.getElementById('offer-modal')?.close();nav('postulaciones');}
    }return;
  }
+// CU20: solicita confirmación para retirar una postulación existente.
  const withdraw=e.target.closest('[data-withdraw]');if(withdraw){
    if(await window.BolsaUI.confirm('No podrás volver a postularte a esta oferta después de retirarte.',{title:'Retirar postulación',confirmLabel:'Retirar postulación',danger:true})){
      const ok=await perform('student-withdraw',{application_id:Number(withdraw.dataset.withdraw)},'Postulación retirada.');
@@ -244,6 +272,7 @@ document.addEventListener('change',e=>{
  const end=document.getElementById('item-fecha_fin');
  if(end){if(e.target.checked)end.value='';end.disabled=e.target.checked;}
 });
+// Procesa los formularios del estudiante y envía cada cambio al backend.
 document.addEventListener('submit',async e=>{
  const f=e.target;
  if(f.id==='academic-form'){
