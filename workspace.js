@@ -15,6 +15,7 @@ const paths={
  aprobadas:'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
  empresas:'<rect x="2" y="6" width="9" height="16" rx="1"/><rect x="13" y="2" width="9" height="20" rx="1"/><path d="M5 10h3M5 14h3M16 6h3M16 10h3M16 14h3"/>',
  revisores:'<circle cx="9" cy="7" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M18 8h4M18 12h4M18 16h4"/>',
+ reportes:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 16v-4M12 16V8M17 16v-6"/>',
  salir:'<path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-6"/>',
  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
  chevron:'<path d="m9 18 6-6-6-6"/>'
