@@ -3,6 +3,11 @@
 -- que corresponde a la madrugada en Paraguay.
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
+-- =====================================================
+-- CU17 - VENCIMIENTO AUTOMÁTICO DE OFERTAS
+-- Identifica publicaciones vencidas y cierra postulaciones activas.
+-- El trabajo se programa mediante pg_cron en Supabase.
+-- =====================================================
 CREATE OR REPLACE FUNCTION public.vencer_ofertas_y_cerrar_postulaciones()
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -12,6 +17,7 @@ AS $$
 DECLARE
   ids bigint[] := '{}'::bigint[];
 BEGIN
+  -- Primero cambia a Vencida las ofertas cuya fecha ya pasó.
   WITH vencidas AS (
     UPDATE public.oferta_laboral
        SET estado='Vencida'
@@ -23,6 +29,7 @@ BEGIN
   )
   SELECT COALESCE(array_agg(id_oferta),'{}'::bigint[]) INTO ids FROM vencidas;
 
+  -- Luego cierra las postulaciones activas de esas ofertas.
   UPDATE public.postulacion
      SET estado='Cerrada'
    WHERE estado='Activa' AND id_oferta=ANY(ids);
