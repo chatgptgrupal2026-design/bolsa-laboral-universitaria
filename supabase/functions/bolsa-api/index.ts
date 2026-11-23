@@ -302,6 +302,38 @@ Deno.serve(async req => {
   return response({ok:true,url:await signedAssetUrl("adjuntos-ofertas",attachment[0].ruta_archivo)});
  }
 
+ if(action==="secretary-report"){
+  // Sólo Secretaría puede obtener este reporte administrativo. No modifica la BD.
+  const actor=await actorFor(req,["Secretaría Académica"]);
+  if(!actor)return fail("Acceso exclusivo de Secretaría Académica.",401);
+  async function reportAll(table,select,order){
+   const rows=[];
+   for(let offset=0;offset<50000;offset+=500){
+    const page=await db(table,{select,order,limit:500,offset});
+    rows.push(...page);
+    if(page.length<500)return rows;
+   }
+   throw new Error("El reporte superó el máximo permitido; consultá con el administrador.");
+  }
+  const [offers,applications,companies,senders]=await Promise.all([
+   reportAll("oferta_laboral","id_oferta,id_empresa,id_remitente,titulo,tipo,estado,origen,fecha_envio,fecha_publicacion","id_oferta.desc"),
+   reportAll("postulacion","id_postulacion,id_oferta","id_postulacion.asc"),
+   reportAll("empresa_verificada","id_empresa,razon_social","id_empresa.asc"),
+   reportAll("empresa_remitente","id_remitente,razon_social","id_remitente.asc")
+  ]);
+  const verified=new Map(companies.map(x=>[Number(x.id_empresa),x.razon_social]));
+  const external=new Map(senders.map(x=>[Number(x.id_remitente),x.razon_social]));
+  const counts=new Map();
+  for(const p of applications)counts.set(Number(p.id_oferta),(counts.get(Number(p.id_oferta))||0)+1);
+  const items=offers.map(o=>({
+   id_oferta:o.id_oferta,titulo:o.titulo,tipo:o.tipo,estado:o.estado,
+   origen:o.origen,
+   empresa:o.id_empresa?verified.get(Number(o.id_empresa))||"Empresa verificada":external.get(Number(o.id_remitente))||"Empresa externa",
+   fecha:o.fecha_publicacion||o.fecha_envio||null,
+   postulaciones:counts.get(Number(o.id_oferta))||0
+  }));
+  return response({ok:true,items});
+ }
  if(action==="secretary-dashboard"){
   const actor=await actorFor(req,["Secretaría Académica"]);if(!actor)return fail("Acceso de Secretaría requerido.",401);
   const [companies,reviewers]=await Promise.all([
