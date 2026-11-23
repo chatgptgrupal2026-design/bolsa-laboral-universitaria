@@ -1,7 +1,12 @@
-/* Confirmaciones y avisos propios de la Bolsa Laboral — accesibles y responsive */
+/* =====================================================
+   MÓDULO: MENSAJES Y CONFIRMACIONES (FRONTEND)
+   Reemplaza los avisos del navegador por cuadros accesibles.
+   Se reutiliza en aprobaciones, bajas y rechazos de ofertas.
+   ===================================================== *//* Confirmaciones y avisos propios de la Bolsa Laboral — accesibles y responsive */
 (function(){
 'use strict';
 let timer=null;
+// Muestra mensajes temporales de éxito o error al usuario.
 function notify(message,kind='success'){
  const toast=document.getElementById('toast');
  if(!toast)return;
@@ -16,6 +21,7 @@ function notify(message,kind='success'){
  toast.setAttribute('role',kind==='error'?'alert':'status');
  timer=setTimeout(()=>{toast.classList.add('hidden');timer=null;},6000);
 }
+// Solicita confirmación antes de guardar un cambio importante o irreversible.
 function confirmAction(message,{title='¿Confirmar acción?',confirmLabel='Confirmar',danger=false}={}){
  return new Promise(resolve=>{
   const dialog=document.createElement('dialog');
@@ -38,6 +44,11 @@ function confirmAction(message,{title='¿Confirmar acción?',confirmLabel='Confi
   else{finish(window.confirm(message));}
  });
 }
+/* =====================================================
+   CU16 - MOTIVO DEL RECHAZO
+   Abre un formulario que exige explicar la decisión del revisor.
+   El motivo se envía después a portal.js y al backend.
+   ===================================================== */
 function reason(message,{title='Motivo del rechazo'}={}){
  return new Promise(resolve=>{
   const dialog=document.createElement('dialog');dialog.className='ux-dialog';
